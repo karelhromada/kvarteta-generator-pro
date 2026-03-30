@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unifikovaný Generátor Karet</title>
+    
+    <!-- Styly -->
+    <link rel="stylesheet" href="css/editor.css">
+    
+    <!-- Písma -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@300;400;700;900&family=Oswald:wght@400;700&family=Montserrat:wght@400;600;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Knihovny pro Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+    <!-- Hlavní Navbar -->
+    <nav class="top-nav">
+        <div class="logo">
+            <span class="logo-icon">♠</span>
+            <span class="logo-text">CardGenerator<span class="pro">PRO</span></span>
+        </div>
+        
+        <div class="project-info-mini">
+            <input type="text" id="project-name" value="Nová Karetní Sada" onchange="updateProjectName()">
+        </div>
+        
+        <div class="nav-actions">
+            <button class="action-btn icon-btn" onclick="undo()" title="Zpět (Cmd+Z)">↩</button>
+            <button class="action-btn icon-btn" onclick="redo()" title="Znovu (Cmd+Shift+Z)">↪</button>
+            <div class="separator"></div>
+            
+            <label class="action-btn icon-btn" title="Otevřít Projekt">
+                📂
+                <input type="file" id="load-project" accept=".json" style="display:none;" onchange="loadProject(event)">
+            </label>
+            <label id="btn-import-json" class="action-btn primary" title="Import dat z dokumentu (pouze pro Kvarteta)" style="display:none; cursor:pointer; background-color:#10b981; border:none;">
+                🎲 Import JSON
+                <input type="file" accept=".json" style="display:none;" onchange="importKvartetaJSON(event)">
+            </label>
+            <button class="action-btn primary" onclick="exportProject()">⭳ Uložit Projekt</button>
+        </div>
+    </nav>
+
+    <!-- UNIFIKOVANÉ ROZHRANÍ -->
+    <main class="main-layout">
+        <!-- Boční Panel (Globální Nastavení) -->
+        <aside class="sidebar">
+            <div class="panel-section">
+                <h3>Typ Hry a Rozložení</h3>
+                <div class="control-row">
+                    <label>Režim</label>
+                    <select id="game-mode-select" class="dropdown" onchange="initCardsByMode(this.value)">
+                        <option value="playing_cards">Hrací Karty (32 ks)</option>
+                        <option value="quartet">Kvarteta (32 ks)</option>
+                        <option value="pexeso">Pexeso (variabilní)</option>
+                    </select>
+                </div>
+                <div class="control-row" id="show-symbols-row" style="margin-top: 10px;">
+                    <label>Zobrazit Značení (7-Eso)</label>
+                    <input type="checkbox" id="show-symbols" checked onchange="toggleSymbols(this.checked)">
+                </div>
+            </div>
+
+            <div id="quartet-global-panel" class="panel-section" style="display:none; background:rgba(234, 179, 8, 0.05); border: 1px solid var(--accent); padding: 15px; border-radius: 8px;">
+                <h3 style="color:var(--accent);">Nastavení Kvarteta</h3>
+                <div class="control-row" style="margin-bottom:10px;">
+                    <label>Aktivní Barva (Skupina 1-8)</label>
+                    <select id="quartet-group-select" class="dropdown" onchange="updateQuartetGroupColorUI()">
+                        <option value="1">Skupina 1</option>
+                        <option value="2">Skupina 2</option>
+                        <option value="3">Skupina 3</option>
+                        <option value="4">Skupina 4</option>
+                        <option value="5">Skupina 5</option>
+                        <option value="6">Skupina 6</option>
+                        <option value="7">Skupina 7</option>
+                        <option value="8">Skupina 8</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Barva Vlastností a Rámu</label>
+                    <input type="color" id="quartet-color-picker" style="width:50px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateQuartetColor(this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Šířka rámu (mm)</label>
+                    <input type="range" id="quartet-border-width" oninput="updateQuartetBorder('borderWidth', this.value)" min="0" max="15" value="0" step="0.5">
+                </div>
+                <div class="control-row">
+                    <label>Odsazení rámu (mm)</label>
+                    <input type="range" id="quartet-border-inset" oninput="updateQuartetBorder('inset', this.value)" min="0" max="15" value="0" step="0.5">
+                </div>
+                <div class="control-row">
+                    <label>Zaoblení rámu (mm)</label>
+                    <input type="range" id="quartet-border-radius" oninput="updateQuartetBorder('borderRadius', this.value)" min="0" max="25" value="4" step="0.5">
+                </div>
+                
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Rozložení vlastností na kartě</h4>
+                <div class="control-row">
+                    <label>Odsazení od kraje X (%)</label>
+                    <input type="range" id="quartet-layout-x" oninput="updateQuartetLayout('offsetX', this.value)" min="0" max="80" value="2" step="0.5">
+                </div>
+                <div class="control-row">
+                    <label>Odsazení od kraje Y (%)</label>
+                    <input type="range" id="quartet-layout-y" oninput="updateQuartetLayout('offsetY', this.value)" min="0" max="80" value="2" step="0.5">
+                </div>
+                
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Názvy Atributů (Statistik)</h4>
+                <div class="control-row"><input type="text" id="quartet-attr-0" value="Výška" onchange="updateQuartetAttr(0, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
+                <div class="control-row"><input type="text" id="quartet-attr-1" value="Váha" onchange="updateQuartetAttr(1, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
+                <div class="control-row"><input type="text" id="quartet-attr-2" value="Věk" onchange="updateQuartetAttr(2, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
+                <div class="control-row"><input type="text" id="quartet-attr-3" value="Síla" onchange="updateQuartetAttr(3, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
+                
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Herní Systém a Typografie</h4>
+                <div class="control-row">
+                    <label>Nechci mít na kvartetech vlastnosti</label>
+                    <input type="checkbox" id="quartet-hide-stats" onchange="updateQuartetConfig('hideStats', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Styl písma (Font)</label>
+                    <select id="quartet-font-family" class="dropdown" onchange="updateQuartetConfig('fontFamily', this.value)">
+                        <option value="'Cinzel', serif">Cinzel (Elegantní patkové)</option>
+                        <option value="'Roboto', sans-serif">Roboto (Moderní bezpatkové)</option>
+                        <option value="'Oswald', sans-serif">Oswald (Úzké a výrazné)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Čisté geometrické)</option>
+                        <option value="'Playfair Display', serif">Playfair Display (Filmové patkové)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Tvar vlastností</label>
+                    <select id="quartet-stat-shape" class="dropdown" onchange="updateQuartetConfig('statShape', this.value)">
+                        <option value="hexagon">Šestiúhelník (Klasika)</option>
+                        <option value="golden-hexagon">Šestiúhelník (Zlatý)</option>
+                        <option value="circle">Kruh</option>
+                        <option value="rounded-square">Zaoblený Čtverec</option>
+                        <option value="shield">Štít</option>
+                    </select>
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Barevné schéma textů</h4>
+                <div class="control-row">
+                    <label>Barva označení (ID)</label>
+                    <input type="checkbox" id="quartet-use-set-id" onchange="updateQuartetConfig('useSetColorId', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Barva názvu</label>
+                    <input type="checkbox" id="quartet-use-set-name" onchange="updateQuartetConfig('useSetColorName', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Barva popisku</label>
+                    <input type="checkbox" id="quartet-use-set-desc" onchange="updateQuartetConfig('useSetColorDesc', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Barva názvů vlastností</label>
+                    <input type="checkbox" id="quartet-use-set-statname" onchange="updateQuartetConfig('useSetColorStatName', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Barva hodnot vlastností</label>
+                    <input type="checkbox" id="quartet-use-set-statvalue" onchange="updateQuartetConfig('useSetColorStatValue', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Barva obrysu vlastností</label>
+                    <input type="checkbox" id="quartet-use-set-statborder" onchange="updateQuartetConfig('useSetColorStatBorder', this.checked)">
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Umístění prvků</h4>
+                <div class="control-label-group">Označení karty (ID)</div>
+                <div class="control-row">
+                    <label>Pozice X (%)</label>
+                    <input type="range" id="quartet-id-offset-x" oninput="updateQuartetConfig('idOffsetX', this.value)" min="0" max="100" value="50" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Pozice Y (%)</label>
+                    <input type="range" id="quartet-id-offset-y" oninput="updateQuartetConfig('idOffsetY', this.value)" min="0" max="100" value="2" step="1">
+                </div>
+
+                <div class="control-label-group" style="margin-top:10px;">Název a Popisek</div>
+                <div class="control-row">
+                    <label>Název X (%)</label>
+                    <input type="range" id="quartet-name-offset-x" oninput="updateQuartetConfig('nameOffsetX', this.value)" min="0" max="100" value="50" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Název Y (%)</label>
+                    <input type="range" id="quartet-name-offset-y" oninput="updateQuartetConfig('nameOffsetY', this.value)" min="0" max="100" value="12" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Popisek X (%)</label>
+                    <input type="range" id="quartet-desc-offset-x" oninput="updateQuartetConfig('descOffsetX', this.value)" min="0" max="100" value="50" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Popisek Y (%)</label>
+                    <input type="range" id="quartet-desc-offset-y" oninput="updateQuartetConfig('descOffsetY', this.value)" min="0" max="100" value="5" step="1">
+                </div>
+
+                <div class="control-row" style="margin-top:15px;">
+                    <label>Rozložení vlastností</label>
+                    <select id="quartet-stat-layout" class="dropdown" onchange="updateQuartetConfig('statLayout', this.value)">
+                        <option value="corners">V rozích (Klasika)</option>
+                        <option value="bottom-row">V řadě dole</option>
+                        <option value="left-column">Sloupec vlevo</option>
+                        <option value="right-column">Sloupec vpravo</option>
+                    </select>
+                </div>
+                <!-- NOVÉ POLOŽKY -->
+                <div class="control-row">
+                    <label>Velikost ikon vlastností</label>
+                    <input type="range" id="quartet-stat-size" oninput="updateQuartetConfig('statSize', this.value)" min="0.5" max="2.0" value="1.0" step="0.1">
+                </div>
+                <div class="control-row">
+                    <label>Velikost písma (Hodnota)</label>
+                    <input type="range" id="quartet-font-size-value" oninput="updateQuartetConfig('fontSizeValue', this.value)" min="0.5" max="3.0" value="1.2" step="0.1">
+                </div>
+                <div class="control-row">
+                    <label>Velikost písma (Popisek)</label>
+                    <input type="range" id="quartet-font-size-label" oninput="updateQuartetConfig('fontSizeLabel', this.value)" min="0.2" max="1.5" value="0.4" step="0.05">
+                </div>
+                <div class="control-row">
+                    <label>Vystředění v tvaru (Hodnota)</label>
+                    <input type="range" id="quartet-stat-value-offset" oninput="updateQuartetConfig('statValueOffset', this.value)" min="-30" max="30" value="0" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Vystředění v tvaru (Popisek)</label>
+                    <input type="range" id="quartet-stat-label-offset" oninput="updateQuartetConfig('statLabelOffset', this.value)" min="-30" max="30" value="0" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Barva pozadí tvarů</label>
+                    <input type="color" id="quartet-stat-bg-color" oninput="updateQuartetConfig('statBgColor', this.value)" value="#000000">
+                </div>
+                <div class="control-row">
+                    <label>Průhlednost pozadí</label>
+                    <input type="range" id="quartet-stat-opacity" oninput="updateQuartetConfig('statOpacity', this.value)" min="1" max="100" value="40" step="1">
+                </div>
+                <div class="control-row">
+                    <label>Rozestupy mezi vlastnostmi</label>
+                    <input type="range" id="quartet-stat-spacing" oninput="updateQuartetConfig('statSpacing', this.value)" min="0" max="60" value="5" step="1">
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="symbols-global-panel">
+                <h3 onclick="toggleSection('global-symbols-settings')">Globální nastavení Symbolů <span class="toggle-icon">▼</span></h3>
+                <div id="global-symbols-settings" class="section-content">
+                    <div class="control-subgroup">
+                        <span class="subgroup-title">Vzhled (Všechny vrstvy)</span>
+                        <div class="control-group">
+                            <label>Měřítko (%)</label>
+                            <input type="range" id="global-sym-scale" min="10" max="300" value="100" oninput="updateGlobalSymbolParam('scale', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Průhlednost (%)</label>
+                            <input type="range" id="global-sym-opacity" min="0" max="100" value="100" oninput="updateGlobalSymbolParam('opacity', this.value)">
+                        </div>
+                    </div>
+
+                    <div class="control-subgroup">
+                        <span class="subgroup-title">Pozice a Rozestupy</span>
+                        <div class="control-group">
+                            <label>Posun série X (mm)</label>
+                            <input type="range" id="global-sym-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetX', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Posun série Y (mm)</label>
+                            <input type="range" id="global-sym-offsetY" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetY', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Vertikální rozestup (%)</label>
+                            <input type="range" id="global-sym-spacingY" min="10" max="300" value="100" oninput="updateGlobalSymbolParam('spacingY', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Rozestup sloupců (mm)</label>
+                            <input type="range" id="global-sym-columnX" min="0" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('columnX', this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="suit-global-panel">
+                <h3 onclick="toggleSection('suit-symbols-section')">Symboly barev (Ikony) <span class="toggle-icon">▼</span></h3>
+                <div id="suit-symbols-section" class="section-content">
+                    <!-- Dynamicky plněno nebo staticky definováno -->
+                    <div id="suit-settings-container">
+                        <!-- Srdce -->
+                        <div class="suit-card" style="border-top: 3px solid #ff4444;">
+                            <div class="suit-card-header">
+                                <span class="suit-icon" style="color:#ff4444;">♥</span>
+                                <label class="upload-btn minor" style="flex:1;">
+                                    <input type="file" onchange="handleSuitUpload('Srdce', event)" style="display:none;">
+                                    <span>Vlastní Ikona</span>
+                                </label>
+                            </div>
+                            
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Vzhled Ikon</span>
+                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Srdce-scale" oninput="updateSuitParam('Srdce', 'scale', this.value)" min="5" max="40" value="18"> </div>
+                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Srdce-opacity" oninput="updateSuitParam('Srdce', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Ohraničení a Rám</span>
+                                <div class="control-group"> 
+                                    <label>Barva</label> 
+                                    <input type="color" id="suit-Srdce-borderColor" oninput="updateSuitParam('Srdce', 'borderColor', this.value)" value="#ff4444" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Srdce-borderWidth" oninput="updateSuitParam('Srdce', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
+                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Srdce-inset" oninput="updateSuitParam('Srdce', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
+                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Srdce-borderRadius" oninput="updateSuitParam('Srdce', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice a Rozestupy</span>
+                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Srdce-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Srdce', 'offsetX', this.value)"> </div>
+                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Srdce-offsetY" oninput="updateSuitParam('Srdce', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
+                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Srdce-spacingY" oninput="updateSuitParam('Srdce', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
+                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Srdce-columnX" oninput="updateSuitParam('Srdce', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                            </div>
+                        </div>
+                        <!-- Piky -->
+                        <div class="suit-card" style="border-top: 3px solid #4444ff;">
+                            <div class="suit-card-header">
+                                <span class="suit-icon" style="color:#4444ff;">♠</span>
+                                <label class="upload-btn minor" style="flex:1;">
+                                    <input type="file" onchange="handleSuitUpload('Piky', event)" style="display:none;">
+                                    <span>Vlastní Ikona</span>
+                                </label>
+                            </div>
+                            
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Vzhled Ikon</span>
+                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Piky-scale" oninput="updateSuitParam('Piky', 'scale', this.value)" min="5" max="40" value="18"> </div>
+                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Piky-opacity" oninput="updateSuitParam('Piky', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Ohraničení a Rám</span>
+                                <div class="control-group"> 
+                                    <label>Barva</label> 
+                                    <input type="color" id="suit-Piky-borderColor" oninput="updateSuitParam('Piky', 'borderColor', this.value)" value="#4444ff" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Piky-borderWidth" oninput="updateSuitParam('Piky', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
+                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Piky-inset" oninput="updateSuitParam('Piky', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
+                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Piky-borderRadius" oninput="updateSuitParam('Piky', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice a Rozestupy</span>
+                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Piky-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Piky', 'offsetX', this.value)"> </div>
+                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Piky-offsetY" oninput="updateSuitParam('Piky', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
+                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Piky-spacingY" oninput="updateSuitParam('Piky', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
+                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Piky-columnX" oninput="updateSuitParam('Piky', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                            </div>
+                        </div>
+                        <!-- Kule -->
+                        <div class="suit-card" style="border-top: 3px solid #ffaa00;">
+                            <div class="suit-card-header">
+                                <span class="suit-icon" style="color:#ffaa00;">♦</span>
+                                <label class="upload-btn minor" style="flex:1;">
+                                    <input type="file" onchange="handleSuitUpload('Kule', event)" style="display:none;">
+                                    <span>Vlastní Ikona</span>
+                                </label>
+                            </div>
+                            
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Vzhled Ikon</span>
+                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Kule-scale" oninput="updateSuitParam('Kule', 'scale', this.value)" min="5" max="40" value="18"> </div>
+                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Kule-opacity" oninput="updateSuitParam('Kule', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Ohraničení a Rám</span>
+                                <div class="control-group"> 
+                                    <label>Barva</label> 
+                                    <input type="color" id="suit-Kule-borderColor" oninput="updateSuitParam('Kule', 'borderColor', this.value)" value="#ffaa00" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Kule-borderWidth" oninput="updateSuitParam('Kule', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
+                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Kule-inset" oninput="updateSuitParam('Kule', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
+                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Kule-borderRadius" oninput="updateSuitParam('Kule', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice a Rozestupy</span>
+                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Kule-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Kule', 'offsetX', this.value)"> </div>
+                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Kule-offsetY" oninput="updateSuitParam('Kule', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
+                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Kule-spacingY" oninput="updateSuitParam('Kule', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
+                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Kule-columnX" oninput="updateSuitParam('Kule', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                            </div>
+                        </div>
+                        <!-- Žaludy -->
+                        <div class="suit-card" style="border-top: 3px solid #22cc22;">
+                            <div class="suit-card-header">
+                                <span class="suit-icon" style="color:#22cc22;">♣</span>
+                                <label class="upload-btn minor" style="flex:1;">
+                                    <input type="file" onchange="handleSuitUpload('Žaludy', event)" style="display:none;">
+                                    <span>Vlastní Ikona</span>
+                                </label>
+                            </div>
+                            
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Vzhled Ikon</span>
+                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Žaludy-scale" oninput="updateSuitParam('Žaludy', 'scale', this.value)" min="5" max="40" value="18"> </div>
+                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Žaludy-opacity" oninput="updateSuitParam('Žaludy', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Ohraničení a Rám</span>
+                                <div class="control-group"> 
+                                    <label>Barva</label> 
+                                    <input type="color" id="suit-Žaludy-borderColor" oninput="updateSuitParam('Žaludy', 'borderColor', this.value)" value="#22cc22" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Žaludy-borderWidth" oninput="updateSuitParam('Žaludy', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
+                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Žaludy-inset" oninput="updateSuitParam('Žaludy', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
+                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Žaludy-borderRadius" oninput="updateSuitParam('Žaludy', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice a Rozestupy</span>
+                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Žaludy-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Žaludy', 'offsetX', this.value)"> </div>
+                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Žaludy-offsetY" oninput="updateSuitParam('Žaludy', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
+                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Žaludy-spacingY" oninput="updateSuitParam('Žaludy', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
+                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Žaludy-columnX" oninput="updateSuitParam('Žaludy', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Globální Rozměry</h3>
+                <div class="control-row">
+                    <label>Šířka (mm)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('card-width', -1)" class="step-btn">▼</button>
+                        <input type="number" id="card-width" value="63" onchange="updateGlobalDimensions()">
+                        <button onclick="stepValue('card-width', 1)" class="step-btn">▲</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Výška (mm)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('card-height', -1)" class="step-btn">▼</button>
+                        <input type="number" id="card-height" value="88" onchange="updateGlobalDimensions()">
+                        <button onclick="stepValue('card-height', 1)" class="step-btn">▲</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Zaoblení (mm)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('card-radius', -0.5)" class="step-btn">▼</button>
+                        <input type="number" id="card-radius" value="4" step="0.5" onchange="updateGlobalDimensions()">
+                        <button onclick="stepValue('card-radius', 0.5)" class="step-btn">▲</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Globální Deformace ilustrací</h3>
+                <div class="control-row">
+                    <label>Zúžit / Rozšířit (%)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('global-stretch-x', -1)" class="step-btn">▼</button>
+                        <input type="number" id="global-stretch-x" value="100" onchange="updateGlobalStretch()">
+                        <button onclick="stepValue('global-stretch-x', 1)" class="step-btn">▲</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Srazit / Protáhnout (%)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('global-stretch-y', -1)" class="step-btn">▼</button>
+                        <input type="number" id="global-stretch-y" value="100" onchange="updateGlobalStretch()">
+                        <button onclick="stepValue('global-stretch-y', 1)" class="step-btn">▲</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Hromadný Zoom (%)</label>
+                    <div class="stepper">
+                        <button onclick="stepValue('global-zoom', -5)" class="step-btn">▼</button>
+                        <input type="number" id="global-zoom" value="100" onchange="updateGlobalZoom()">
+                        <button onclick="stepValue('global-zoom', 5)" class="step-btn">▲</button>
+                    </div>
+                </div>
+                <button class="action-btn primary full-width" style="margin-top: 10px;" onclick="fillActiveCard()">↔ Vyplnit Aktivní Kartu</button>
+            </div>
+
+            <div class="panel-section" id="layout-global-panel">
+                <h3>Globální Rozvržení (Dle Hodnoty)</h3>
+                <div class="control-row" style="margin-bottom: 20px;">
+                    <label>Hodnota</label>
+                    <select id="layout-value-select" class="dropdown" onchange="handleLayoutValueChange()">
+                        <option value="7">Sedmičky (7)</option>
+                        <option value="8">Osmičky (8)</option>
+                        <option value="9">Devítky (9)</option>
+                        <option value="10">Desítky (10)</option>
+                        <option value="Eso">Esa (A)</option>
+                        <option value="Král">Král (K)</option>
+                        <option value="Svršek">Svršek (Q)</option>
+                        <option value="Spodek">Spodek (J)</option>
+                    </select>
+                </div>
+                
+                <div class="control-subgroup">
+                    <span class="subgroup-title">Pozice a Rozestupy</span>
+                    <div class="control-group">
+                        <label>Posun X (mm)</label>
+                        <input type="range" id="layout-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetX', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>Posun Y (mm)</label>
+                        <input type="range" id="layout-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetY', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>Rozestupy Y (%)</label>
+                        <input type="range" id="layout-spacing-y" min="50" max="150" value="100" oninput="updateLayoutParam('spacingY', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>Sloupce X (mm)</label>
+                        <input type="range" id="layout-column-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('columnX', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="individual-layout-panel" class="panel-section" style="border: 1px solid var(--accent); display:none;">
+                <h3>Individuální úprava (Aktivní karta)</h3>
+                <div class="control-row" style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
+                    <label style="color:var(--accent); font-weight:bold;">ZÁMEK KARTY 🔒</label>
+                    <input type="checkbox" id="card-lock-toggle" onchange="toggleCardLock(this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Vlastní rozvržení</label>
+                    <input type="checkbox" id="individual-override-toggle" onchange="toggleIndividualOverride(this.checked)">
+                </div>
+                
+                <div id="individual-quartet-controls" style="display:none; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1); margin-top:10px;">
+                    <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px;">KVARTETA DATA</h4>
+                    <div class="control-group">
+                        <label>Jméno</label>
+                        <input type="text" id="ind-q-name" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" oninput="updateActiveQuartetData('name', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>Popis</label>
+                         <textarea id="ind-q-desc" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px; font-size:12px;" rows="2" oninput="updateActiveQuartetData('description', this.value)"></textarea>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                        <input type="text" id="ind-q-stat0" placeholder="Stat 1" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 0)">
+                        <input type="text" id="ind-q-stat1" placeholder="Stat 2" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 1)">
+                        <input type="text" id="ind-q-stat2" placeholder="Stat 3" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 2)">
+                        <input type="text" id="ind-q-stat3" placeholder="Stat 4" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 3)">
+                    </div>
+                </div>
+
+                <div id="individual-layout-controls" style="opacity:0.5; pointer-events:none;">
+                    <div class="control-subgroup" id="individual-symbols-subgroup">
+                        <span class="subgroup-title">Symboly (Vlastní)</span>
+                        <div class="control-group">
+                            <label>Měřítko (%)</label>
+                            <input type="range" id="ind-scale" min="10" max="300" value="100" oninput="updateIndividualParam('scale', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Průhlednost (%)</label>
+                            <input type="range" id="ind-opacity" min="0" max="100" value="100" oninput="updateIndividualParam('opacity', this.value)">
+                        </div>
+                    </div>
+
+                    <div class="control-subgroup" id="ind-position-subgroup">
+                        <span class="subgroup-title">Pozice a Rozestupy</span>
+                        <div class="control-group">
+                            <label>Posun X (mm)</label>
+                            <input type="range" id="ind-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetX', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Posun Y (mm)</label>
+                            <input type="range" id="ind-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetY', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Rozestupy (%)</label>
+                            <input type="range" id="ind-spacing-y" min="50" max="150" value="100" oninput="updateIndividualParam('spacingY', this.value)">
+                        </div>
+                        <div class="control-group">
+                            <label>Sloupce X (mm)</label>
+                            <input type="range" id="ind-column-x" min="-30" max="30" value="0" step="0.5" oninput="updateIndividualParam('columnX', this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Sekce pro individuální obrázek -->
+                    <div id="individual-card-image-section" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px; letter-spacing:1px;">ILUSTRACE KARTY</h4>
+                        <label class="upload-btn minor" style="width:100%;">
+                            <input type="file" accept="image/*" style="display:none;" onchange="handleIndividualImageUpload(event)">
+                            <span>+ Nahrát Vlastní Obrázek</span>
+                        </label>
+                        <div id="ind-img-controls" style="display:none; margin-top:15px;">
+                            <div class="control-row">
+                                <label>Měřítko (%)</label>
+                                <input type="range" id="ind-img-scale" min="10" max="400" value="100" oninput="updateIndividualImageParam('scale', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Posun X</label>
+                                <input type="range" id="ind-img-x" min="-200" max="200" value="0" oninput="updateIndividualImageParam('x', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Posun Y</label>
+                                <input type="range" id="ind-img-y" min="-200" max="200" value="0" oninput="updateIndividualImageParam('y', this.value)">
+                            </div>
+                            
+                            <div style="display:flex; gap:8px; margin-top:15px;">
+                                <button onclick="resetIndividualImage()" class="action-btn minor" style="flex:1; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat Obr.</button>
+                                <button onclick="exportSingleCard()" class="action-btn primary" style="flex:2; background:#10b981; border:none;">📥 Uložit PNG</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="action-btn minor full-width" style="margin-top:10px" onclick="resetIndividualLayout()">Reset na globální</button>
+            </div>
+
+            <div class="panel-section">
+                <h3>Globální Overlay (Vrstva 2)</h3>
+                <div class="control-row">
+                    <label>Barva ohraničení</label>
+                    <input type="color" id="overlay-border-color" value="#000000" style="width:100%; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateGlobalOverlayParam('borderColor', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Šířka ohraničení (px)</label>
+                    <input type="range" id="overlay-border-width" min="0" max="20" value="0" oninput="updateGlobalOverlayParam('borderWidth', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Vnitřní odsazení (mm)</label>
+                    <input type="range" id="overlay-inset" min="0" max="10" step="0.5" value="0" oninput="updateGlobalOverlayParam('inset', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Zaoblení rohů (mm)</label>
+                    <input type="range" id="overlay-border-radius" min="0" max="20" step="0.5" value="4" oninput="updateGlobalOverlayParam('borderRadius', this.value)">
+                </div>
+                
+                <label class="upload-btn minor">
+                    <input type="file" id="upload-overlay" accept="image/*" style="display:none;" onchange="handleOverlayUpload(event)">
+                    <span>+ Společný rám / Logo</span>
+                </label>
+                <div class="control-row">
+                    <label>Průhlednost (%)</label>
+                    <input type="range" id="overlay-opacity" min="0" max="100" value="80" oninput="updateOverlay()">
+                </div>
+                <div class="control-row">
+                    <label>Posun X / Y (px)</label>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="number" id="overlay-x" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateOverlay()">
+                        <input type="number" id="overlay-y" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateOverlay()">
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Deformace X / Y (%)</label>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="number" id="overlay-stretch-x" value="100" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateOverlay()">
+                        <input type="number" id="overlay-stretch-y" value="100" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateOverlay()">
+                    </div>
+                </div>
+                <p class="hint-text">Poznámka: Vybraný rám se aplikuje na všechny karty.</p>
+            </div>
+
+            <div class="panel-section">
+                <h3>Globální Logo (Vrstva 2)</h3>
+                <label class="upload-btn minor">
+                    <input type="file" id="upload-logo" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+                    <span>+ Nahrát Logo / Erb</span>
+                </label>
+                <div class="control-row">
+                    <label>Průhlednost (%)</label>
+                    <input type="range" id="logo-opacity" min="0" max="100" value="100" oninput="updateLogo()">
+                </div>
+                <div class="control-row">
+                    <label>Posun X / Y (px)</label>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="number" id="logo-x" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateLogo()">
+                        <input type="number" id="logo-y" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateLogo()">
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Zoom (%)</label>
+                    <div class="stepper">
+                        <input type="number" id="logo-zoom" value="30" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateLogo()">
+                    </div>
+                </div>
+                <p class="hint-text">Tip: Alt + Tah myší hýbe logem přímo na kartě.</p>
+            </div>
+
+            <div class="panel-actions-bottom">
+                <button class="action-btn primary full-width" onclick="exportPrintSheets()">🖨️ Export k Tisku</button>
+            </div>
+            <p class="hint-text" style="margin-top: 10px; text-align: center;">Obrázky přidávejte Drag&Drop přímo na karty.</p>
+        </aside>
+
+        <!-- Pracovní plocha (Mřížka karet) -->
+        <section class="workspace bg-dots">
+            <div class="cards-grid" id="cards-grid">
+                <!-- Dynamicky generováno via generator.js -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Skripty -->
+    <script src="js/state.js"></script>
+    <script src="js/cropper.js"></script>
+    <script src="js/generator.js"></script>
+
+</body>
+</html>
