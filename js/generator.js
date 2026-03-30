@@ -471,11 +471,11 @@ function updateIndividualParam(param, value) {
     renderGrid();
 }
 
-function toggleCardLock() {
+function toggleCardLock(checked) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (card) {
-        card.isLocked = !card.isLocked;
+        card.isLocked = checked;
         saveState();
         renderUIFromState();
     }
@@ -827,13 +827,7 @@ function renderUIFromState() {
             const labelEl = document.getElementById('active-card-label');
             if (labelEl) labelEl.innerText = card.label;
 
-            const lockBtn = document.getElementById('card-lock-btn');
-            if (lockBtn) {
-                lockBtn.innerText = card.isLocked ? "🔒 Zamčeno" : "🔓 Odemčeno";
-                lockBtn.classList.toggle('active', card.isLocked);
-                // Optionally change color for visual feedback
-                lockBtn.style.color = card.isLocked ? "#ff4444" : "var(--accent)";
-            }
+            setChecked('card-lock-toggle', card.isLocked);
             
             const ctrls = document.getElementById('individual-layout-controls');
             if (ctrls) {
