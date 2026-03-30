@@ -440,6 +440,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
     position: relative;
 }
 
+.layout-wrapper-grid-2x2 {
+    position: absolute; z-index: 15; pointer-events: none;
+    top: 50%; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    justify-items: center; align-items: center;
+    padding: 0 10% 20% 10%;
+}
+.layout-wrapper-grid-2x2 .hex-container {
+    position: relative;
+}
+
 .layout-wrapper-left-column {
     position: absolute; z-index: 15; pointer-events: none;
     top: 0; left: 0; right: 0; bottom: 0;

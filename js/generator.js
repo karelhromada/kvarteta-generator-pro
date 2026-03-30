@@ -313,7 +313,7 @@ function drawQuartetOverlay(cardEl, card) {
         const statsWrapper = document.createElement('div');
         statsWrapper.className = `layout-wrapper-${statLayout}`;
         
-        if (statLayout === 'bottom-row' || statLayout === 'left-column' || statLayout === 'right-column') {
+        if (statLayout === 'bottom-row' || statLayout === 'left-column' || statLayout === 'right-column' || statLayout === 'grid-2x2') {
             statsWrapper.style.gap = `${statSpacing}px`;
         }
         statsWrapper.style.textRendering = 'optimizeLegibility';
