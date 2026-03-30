@@ -87,6 +87,16 @@ let AppState = {
         columnX: 0
     },
 
+    // --- REŽIM PEXESO (v1.0) ---
+    pexesoSettings: {
+        pairsCount: 16,
+        showName: true,
+        showDesc: false,
+        nameOffsetX: 50, nameOffsetY: 10,
+        descOffsetX: 50, descOffsetY: 5,
+        fontFamily: "'Roboto', sans-serif"
+    },
+
     // --- REŽIM KVARTETA (v1.5) ---
     quartetSettings: {
         attributeNames: ["Výška", "Váha", "Věk", "Síla"], // Výchozí názvy
@@ -163,9 +173,11 @@ function initCardsByMode(mode) {
             });
         }
     } else if (mode === 'pexeso') {
-        const count = AppState.pexesoCount || 16;
-        for (let i = 1; i <= count; i++) {
-            AppState.cards.push(createEmptyCard(`pex_${i}`, `Pexeso ${i}`));
+        const pairs = AppState.pexesoSettings.pairsCount || 16;
+        for (let i = 1; i <= pairs; i++) {
+            // Každý pár má dvě karty: A a B
+            AppState.cards.push(createEmptyCard(`pex_${i}A`, `${i}A`));
+            AppState.cards.push(createEmptyCard(`pex_${i}B`, `${i}B`));
         }
     }
     
@@ -178,11 +190,12 @@ function initCardsByMode(mode) {
     const indQuartetControls = document.getElementById('individual-quartet-controls');
     const indLayoutControls = document.getElementById('individual-symbols-subgroup');
     const indPositionControls = document.getElementById('ind-position-subgroup');
-    const showSymbolsRow = document.getElementById('show-symbols-row');
+    const pexGlobalPanel = document.getElementById('pexeso-global-panel');
     
     if (qGlobalPanel) {
         if (mode === 'quartet') {
             qGlobalPanel.style.display = 'block';
+            if (pexGlobalPanel) pexGlobalPanel.style.display = 'none';
             if (symGlobalPanel) symGlobalPanel.style.display = 'none';
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
@@ -191,8 +204,20 @@ function initCardsByMode(mode) {
             if (indLayoutControls) indLayoutControls.style.display = 'none';
             if (indPositionControls) indPositionControls.style.display = 'none';
             if (showSymbolsRow) showSymbolsRow.style.display = 'none';
+        } else if (mode === 'pexeso') {
+            qGlobalPanel.style.display = 'none';
+            if (pexGlobalPanel) pexGlobalPanel.style.display = 'block';
+            if (symGlobalPanel) symGlobalPanel.style.display = 'none';
+            if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
+            if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
+            if (importBtn) importBtn.style.display = 'none';
+            if (indQuartetControls) indQuartetControls.style.display = 'none';
+            if (indLayoutControls) indLayoutControls.style.display = 'none';
+            if (indPositionControls) indPositionControls.style.display = 'none';
+            if (showSymbolsRow) showSymbolsRow.style.display = 'none';
         } else {
             qGlobalPanel.style.display = 'none';
+            if (pexGlobalPanel) pexGlobalPanel.style.display = 'none';
             if (symGlobalPanel) symGlobalPanel.style.display = 'block';
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'flex';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'block';

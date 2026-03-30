@@ -236,6 +236,59 @@
                     <label>Rozestupy mezi vlastnostmi</label>
                     <input type="range" id="quartet-stat-spacing" oninput="updateQuartetConfig('statSpacing', this.value)" min="0" max="60" value="5" step="1">
                 </div>
+            
+            <div id="pexeso-global-panel" class="panel-section" style="display:none; background:rgba(16, 185, 129, 0.05); border: 1px solid #10b981; padding: 15px; border-radius: 8px;">
+                <h3 style="color:#10b981;">Nastavení Pexesa</h3>
+                <div class="control-row">
+                    <label>Počet dvojic</label>
+                    <select id="pexeso-pairs-select" class="dropdown" onchange="updatePexesoConfig('pairsCount', this.value); initCardsByMode('pexeso');">
+                        <option value="8">8 dvojic (16 karet)</option>
+                        <option value="16">16 dvojic (32 karet)</option>
+                        <option value="32">32 dvojic (64 karet)</option>
+                    </select>
+                </div>
+                
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Vzhled a Typografie</h4>
+                <div class="control-row">
+                    <label>Zobrazit název karty</label>
+                    <input type="checkbox" id="pexeso-show-name" checked onchange="updatePexesoConfig('showName', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Zobrazit popisek karty</label>
+                    <input type="checkbox" id="pexeso-show-desc" onchange="updatePexesoConfig('showDesc', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Styl písma (Font)</label>
+                    <select id="pexeso-font-family" class="dropdown" onchange="updatePexesoConfig('fontFamily', this.value)">
+                        <option value="'Roboto', sans-serif">Roboto (Moderní)</option>
+                        <option value="'Cinzel', serif">Cinzel (Elegantní)</option>
+                        <option value="'Oswald', sans-serif">Oswald (Úzké)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Geometrické)</option>
+                    </select>
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Umístění textů</h4>
+                <div class="control-row">
+                    <label>Název X (%)</label>
+                    <input type="range" id="pexeso-name-x" oninput="updatePexesoConfig('nameOffsetX', this.value)" min="0" max="100" value="50">
+                </div>
+                <div class="control-row">
+                    <label>Název Y (%)</label>
+                    <input type="range" id="pexeso-name-y" oninput="updatePexesoConfig('nameOffsetY', this.value)" min="0" max="100" value="10">
+                </div>
+                <div class="control-row">
+                    <label>Popisek X (%)</label>
+                    <input type="range" id="pexeso-desc-x" oninput="updatePexesoConfig('descOffsetX', this.value)" min="0" max="100" value="50">
+                </div>
+                <div class="control-row">
+                    <label>Popisek Y (%)</label>
+                    <input type="range" id="pexeso-desc-y" oninput="updatePexesoConfig('descOffsetY', this.value)" min="0" max="100" value="5">
+                </div>
+
+                <button class="action-btn" style="width:100%; margin-top:15px; background:rgba(16, 185, 129, 0.2); border:1px solid #10b981; color:#fff;" onclick="applyGlobalCropToAllCards()">
+                    ✨ Sjednotit ořez v celé sadě
+                </button>
+            </div>
             </div>
 
             <div class="sidebar-section" id="symbols-global-panel">

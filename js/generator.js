@@ -113,6 +113,8 @@ function renderGrid() {
         // VRSTVA 3: DYNAMICKÉ SYMBOLY
         if (AppState.gameMode === 'quartet') {
             drawQuartetOverlay(cardEl, card);
+        } else if (AppState.gameMode === 'pexeso') {
+            drawPexesoOverlay(cardEl, card);
         } else if (AppState.showSymbols) {
             drawSymbols(cardEl, card);
         }
@@ -1045,4 +1047,78 @@ function updateActiveQuartetData(field, value, statIndex = 0) {
     
     saveState();
     renderGrid();
+}
+
+// --- PEXESO LOGIC ---
+
+function updatePexesoConfig(prop, value) {
+    if (!AppState.pexesoSettings) {
+        AppState.pexesoSettings = {
+            pairsCount: 16,
+            showName: true,
+            showDesc: false,
+            nameOffsetX: 50, nameOffsetY: 10,
+            descOffsetX: 50, descOffsetY: 5,
+            fontFamily: "'Roboto', sans-serif"
+        };
+    }
+    AppState.pexesoSettings[prop] = value;
+    saveState();
+    renderGrid();
+}
+
+function drawPexesoOverlay(cardEl, card) {
+    const cfg = AppState.pexesoSettings || {};
+    const fontFamily = cfg.fontFamily || "'Roboto', sans-serif";
+    const data = card.quartetData || { name: "", description: "" };
+
+    if (cfg.showName) {
+        const nameEl = document.createElement('h1');
+        nameEl.className = 'kvarteta-card-name';
+        nameEl.style.position = 'absolute';
+        nameEl.style.left = `${cfg.nameOffsetX || 50}%`;
+        nameEl.style.bottom = `${cfg.nameOffsetY || 10}%`;
+        nameEl.style.transform = 'translateX(-50%)';
+        nameEl.style.width = '90%';
+        nameEl.style.fontFamily = fontFamily;
+        nameEl.style.fontSize = '1.1rem';
+        nameEl.innerText = data.name || card.label;
+        cardEl.appendChild(nameEl);
+    }
+
+    if (cfg.showDesc) {
+        const descEl = document.createElement('p');
+        descEl.className = 'kvarteta-card-desc';
+        descEl.style.position = 'absolute';
+        descEl.style.left = `${cfg.descOffsetX || 50}%`;
+        descEl.style.bottom = `${cfg.descOffsetY || 5}%`;
+        descEl.style.transform = 'translateX(-50%)';
+        descEl.style.width = '80%';
+        descEl.style.fontFamily = fontFamily;
+        descEl.innerText = data.description || '';
+        cardEl.appendChild(descEl);
+    }
+}
+
+function applyGlobalCropToAllCards() {
+    if (!AppState.activeCardId) {
+        alert("Nejdříve vyberte kartu (kliknutím), jejíž ořez chcete kopírovat.");
+        return;
+    }
+    const activeCard = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!activeCard) return;
+
+    if (!confirm("Opravdu chcete ořez této karty (přiblížení a posun) aplikovat na všechny ostatní karty v sadě?")) {
+        return;
+    }
+
+    const sourceCrop = JSON.parse(JSON.stringify(activeCard.crop));
+    
+    AppState.cards.forEach(card => {
+        card.crop = JSON.parse(JSON.stringify(sourceCrop));
+    });
+
+    saveState();
+    renderGrid();
+    alert("Ořez byl sjednocen pro celou sadu.");
 }
