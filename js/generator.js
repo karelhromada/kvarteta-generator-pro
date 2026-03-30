@@ -439,37 +439,27 @@ function updateLayoutParam(param, value) {
     renderGrid();
 }
 
-function toggleIndividualOverride(enabled) {
+function updateIndividualParam(param, value) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (!card) return;
 
-    if (enabled) {
+    // Pokud override neexistuje, vytvoříme ho na základě aktuální hodnoty/barvy
+    if (!card.symbolOverride) {
         const parts = card.id.split('_');
         const suit = parts[0];
         const val = parts[1] || '7';
-        const globalVal = AppState.valueSettings[val] || {offsetY:0, spacingY:1, columnX:0};
-        const globalSuit = AppState.suitSettings[suit] || {scale: 0.18, opacity: 1, offsetY:0, spacingY:1, columnX:0};
+        const gV = AppState.valueSettings[val] || {offsetY:0, spacingY:1, columnX:0};
+        const gS = AppState.suitSettings[suit] || {scale: 0.18, opacity: 1, offsetY:0, spacingY:1, columnX:0};
         card.symbolOverride = { 
-            offsetX: globalVal.offsetX || 0,
-            offsetY: globalVal.offsetY,
-            spacingY: globalVal.spacingY,
-            columnX: globalVal.columnX,
-            scale: globalSuit.scale, 
-            opacity: globalSuit.opacity 
-        }; 
-    } else {
-        card.symbolOverride = null;
+            offsetX: gV.offsetX || 0,
+            offsetY: gV.offsetY,
+            spacingY: gV.spacingY,
+            columnX: gV.columnX,
+            scale: gS.scale, 
+            opacity: gS.opacity 
+        };
     }
-    saveState();
-    renderUIFromState();
-    renderGrid();
-}
-
-function updateIndividualParam(param, value) {
-    if (!AppState.activeCardId) return;
-    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
-    if (!card || !card.symbolOverride) return;
 
     const val = parseFloat(value);
     if (param === 'scale') card.symbolOverride.scale = val / 100;
@@ -481,8 +471,18 @@ function updateIndividualParam(param, value) {
     renderGrid();
 }
 
+function resetIndividualOverride() {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (card) {
+        card.symbolOverride = null;
+        saveState();
+        renderUIFromState();
+    }
+}
+
 function resetIndividualLayout() {
-    toggleIndividualOverride(false);
+    resetIndividualOverride();
 }
 
 // --- SUIT HANDLERS ---
@@ -654,6 +654,10 @@ async function exportSingleCard() {
 
 function setActiveCard(id, e) {
     AppState.activeCardId = id;
+    const card = AppState.cards.find(c => c.id === id);
+    if (card) {
+        card.isLocked = false; // Vždy odemknout při kliknutí
+    }
     document.querySelectorAll('.preview-card').forEach(el => el.classList.remove('active'));
     document.getElementById('card-el-' + id).classList.add('active');
     renderUIFromState(); 
@@ -662,8 +666,7 @@ function setActiveCard(id, e) {
 function handleImageDrop(cardId, e) {
     e.preventDefault();
     const card = AppState.cards.find(c => c.id === cardId);
-    if (!card || card.isLocked) {
-        if (card && card.isLocked) alert("Tato karta je zamčená. Pro změnu obrázku ji nejdříve odemkněte.");
+    if (!card) {
         return;
     }
     const file = e.dataTransfer.files[0];
@@ -816,26 +819,10 @@ function renderUIFromState() {
             const labelEl = document.getElementById('active-card-label');
             if (labelEl) labelEl.innerText = card.label;
             
-            const lockBtn = document.getElementById('card-lock-btn');
-            if (lockBtn) {
-                lockBtn.classList.toggle('locked', card.isLocked);
-                lockBtn.innerText = card.isLocked ? '🔒 Odemknout kartu' : '🔓 Zamknout kartu';
-            }
-
-            setChecked('individual-override-toggle', !!card.symbolOverride);
-            const overrideToggle = document.getElementById('individual-override-toggle');
-            if (overrideToggle) overrideToggle.disabled = card.isLocked;
-
-            const uploadBtn = document.querySelector('#individual-card-image-section .upload-btn');
-            if (uploadBtn) {
-                uploadBtn.style.opacity = card.isLocked ? 0.3 : 1;
-                uploadBtn.style.pointerEvents = card.isLocked ? 'none' : 'auto';
-            }
-
             const ctrls = document.getElementById('individual-layout-controls');
             if (ctrls) {
-                ctrls.style.opacity = (card.symbolOverride && !card.isLocked) ? 1 : 0.5;
-                ctrls.style.pointerEvents = (card.symbolOverride && !card.isLocked) ? 'auto' : 'none';
+                ctrls.style.opacity = 1;
+                ctrls.style.pointerEvents = 'auto';
             }
 
             if (card.symbolOverride) {
