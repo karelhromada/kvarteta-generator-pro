@@ -665,9 +665,7 @@ async function exportSingleCard() {
 function setActiveCard(id, e) {
     AppState.activeCardId = id;
     const card = AppState.cards.find(c => c.id === id);
-    if (card) {
-        card.isLocked = false; // Vždy odemknout při kliknutí
-    }
+    // Vybíráme pouze kartu, neovlivňujeme její zámek (ten je plně manuální)
     document.querySelectorAll('.preview-card').forEach(el => el.classList.remove('active'));
     document.getElementById('card-el-' + id).classList.add('active');
     renderUIFromState(); 
