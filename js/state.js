@@ -154,7 +154,14 @@ let AppState = {
 
 // --- INICIALIZACE SADY ---
 
-function initCardsByMode(mode) {
+function initCardsByMode(mode, forceReset = false) {
+    // Pokud už karty máme a nemáme vynucený reset, jen aktualizujeme UI a končíme
+    if (!forceReset && AppState.cards && AppState.cards.length > 0 && AppState.gameMode === mode) {
+        syncUIPanels(mode);
+        renderUIFromState();
+        return;
+    }
+
     AppState.gameMode = mode;
     AppState.cards = [];
     
@@ -173,7 +180,23 @@ function initCardsByMode(mode) {
             });
         }
     } else if (mode === 'pexeso') {
+        if (!AppState.pexesoSettings) {
+             AppState.pexesoSettings = {
+                pairsCount: 16,
+                showName: true,
+                showDesc: false,
+                nameOffsetX: 50, nameOffsetY: 10,
+                descOffsetX: 50, descOffsetY: 5,
+                fontFamily: "'Roboto', sans-serif"
+            };
+        }
         const pairs = AppState.pexesoSettings.pairsCount || 16;
+        
+        // Pexeso by mělo být defaultně čtvercové
+        AppState.cardWidth = 60;
+        AppState.cardHeight = 60;
+        AppState.cardRadius = 4;
+
         for (let i = 1; i <= pairs; i++) {
             // Každý pár má dvě karty: A a B
             AppState.cards.push(createEmptyCard(`pex_${i}A`, `${i}A`));
@@ -181,7 +204,13 @@ function initCardsByMode(mode) {
         }
     }
     
-    // UI Přepínač
+    syncUIPanels(mode);
+
+    saveState();
+    renderUIFromState();
+}
+
+function syncUIPanels(mode) {
     const qGlobalPanel = document.getElementById('quartet-global-panel');
     const symGlobalPanel = document.getElementById('symbols-global-panel');
     const layoutGlobalPanel = document.getElementById('layout-global-panel');
@@ -191,6 +220,7 @@ function initCardsByMode(mode) {
     const indLayoutControls = document.getElementById('individual-symbols-subgroup');
     const indPositionControls = document.getElementById('ind-position-subgroup');
     const pexGlobalPanel = document.getElementById('pexeso-global-panel');
+    const showSymbolsRow = document.getElementById('show-symbols-row');
     
     if (qGlobalPanel) {
         if (mode === 'quartet') {
@@ -228,9 +258,6 @@ function initCardsByMode(mode) {
             if (showSymbolsRow) showSymbolsRow.style.display = 'flex';
         }
     }
-
-    saveState();
-    renderUIFromState();
 }
 
 function createEmptyCard(id, label) {
@@ -374,6 +401,31 @@ function renderUIFromState() {
     const cr = document.getElementById('card-radius');
     if(cr) cr.value = AppState.cardRadius;
 
+    // Pexeso UI Sync
+    if (AppState.gameMode === 'pexeso' && AppState.pexesoSettings) {
+        const ps = AppState.pexesoSettings;
+        const p_pairs = document.getElementById('pexeso-pairs-select');
+        if(p_pairs) p_pairs.value = ps.pairsCount;
+
+        const p_name = document.getElementById('pexeso-show-name');
+        if(p_name) p_name.checked = ps.showName;
+
+        const p_desc = document.getElementById('pexeso-show-desc');
+        if(p_desc) p_desc.checked = ps.showDesc;
+
+        const p_font = document.getElementById('pexeso-font-family');
+        if(p_font) p_font.value = ps.fontFamily;
+
+        const p_nx = document.getElementById('pexeso-name-x');
+        if(p_nx) p_nx.value = ps.nameOffsetX;
+        const p_ny = document.getElementById('pexeso-name-y');
+        if(p_ny) p_ny.value = ps.nameOffsetY;
+        const p_dx = document.getElementById('pexeso-desc-x');
+        if(p_dx) p_dx.value = ps.descOffsetX;
+        const p_dy = document.getElementById('pexeso-desc-y');
+        if(p_dy) p_dy.value = ps.descOffsetY;
+    }
+
     // Pokud existuje renderGrid v generator.js, zavoláme jej
     if (typeof renderGrid === 'function') {
         renderGrid();
@@ -388,15 +440,20 @@ window.onload = () => {
             const parsed = JSON.parse(saved);
             AppState = { ...AppState, ...parsed, history: [], historyIndex: -1 };
             saveState();
-            initCardsByMode(AppState.gameMode || 'playing_cards');
-            renderUIFromState();
+            // Tady NEVOLÁME initCardsByMode, pokud už v AppState karty jsou!
+            if (!AppState.cards || AppState.cards.length === 0) {
+                initCardsByMode(AppState.gameMode || 'playing_cards');
+            } else {
+                syncUIPanels(AppState.gameMode);
+                renderUIFromState();
+            }
             return;
         } catch(e) {}
     }
     if (AppState.cards.length === 0) {
         initCardsByMode('playing_cards');
     } else {
-        initCardsByMode(AppState.gameMode || 'playing_cards');
+        syncUIPanels(AppState.gameMode);
         renderUIFromState();
     }
 };
