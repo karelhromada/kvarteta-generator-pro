@@ -166,6 +166,10 @@ function initCardsByMode(mode, forceReset = false) {
     AppState.cards = [];
     
     if (mode === 'playing_cards') {
+        // Hrací karty a kvarteta mají defaultně 63x105 mm
+        AppState.cardWidth = 63;
+        AppState.cardHeight = 105;
+        
         const suits = ['Srdce', 'Piky', 'Kule', 'Žaludy'];
         const values = ['7', '8', '9', '10', 'Spodek', 'Svršek', 'Král', 'Eso'];
         suits.forEach(suit => {
@@ -174,6 +178,10 @@ function initCardsByMode(mode, forceReset = false) {
             });
         });
     } else if (mode === 'quartet') {
+        // Hrací karty a kvarteta mají defaultně 63x105 mm
+        AppState.cardWidth = 63;
+        AppState.cardHeight = 105;
+
         for (let i = 1; i <= 8; i++) {
             ['A', 'B', 'C', 'D'].forEach(letter => {
                 AppState.cards.push(createEmptyCard(`q_${i}${letter}`, `${i}${letter}`));
@@ -192,13 +200,12 @@ function initCardsByMode(mode, forceReset = false) {
         }
         const pairs = AppState.pexesoSettings.pairsCount || 16;
         
-        // Pexeso by mělo být defaultně čtvercové
+        // Pexeso zůstává čtvercové
         AppState.cardWidth = 60;
         AppState.cardHeight = 60;
         AppState.cardRadius = 4;
 
         for (let i = 1; i <= pairs; i++) {
-            // Každý pár má dvě karty: A a B
             AppState.cards.push(createEmptyCard(`pex_${i}A`, `${i}A`));
             AppState.cards.push(createEmptyCard(`pex_${i}B`, `${i}B`));
         }
