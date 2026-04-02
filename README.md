@@ -1,4 +1,5 @@
 # Plán projektu: Unifikovaný Generátor Karetních her (Mřížkový Editor)
+**GitHub Repo:** https://github.com/karelhromada/kvarteta-generator-pro.git
 
 Tento nástroj slouží k profesionální tvorbě a vizuálnímu ladění celých karetních sad (Hrací karty, Kvarteta, Pexesa) v rámci jednoho přehledného rozhraní.
 
