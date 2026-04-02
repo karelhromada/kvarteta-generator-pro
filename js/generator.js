@@ -30,158 +30,208 @@ const SYMBOL_LAYOUTS = {
     'J': [ { x: 20, y: 82.5 } ]
 };
 
+// --- POMOCNÉ FUNKCE PRO UI & VÝKON ---
+function normalizedSuit(name) {
+    if (!name) return name;
+    return name.normalize('NFC');
+}
+
+// Bezpečné získání nastavení barvy (suit) - nezávislé na kódování klíčů
+function getSuitConfig(name) {
+    if (!name) return null;
+    const normName = normalizedSuit(name);
+    // 1. Přímý pokus
+    if (AppState.suitSettings[normName]) return AppState.suitSettings[normName];
+    // 2. Prohledání všech klíčů (případ, kdy jsou v jiném kódování)
+    for (const key in AppState.suitSettings) {
+        if (normalizedSuit(key) === normName) return AppState.suitSettings[key];
+    }
+    return null;
+}
+
+let renderRequested = false;
+function requestRender() {
+    if (renderRequested) return;
+    renderRequested = true;
+    requestAnimationFrame(() => {
+        renderGrid();
+        renderRequested = false;
+    });
+}
+
+let saveTimeout = null;
+function debouncedSaveState() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        saveState();
+        saveTimeout = null;
+    }, 500); // Uložíme až po 0.5s nečinnosti
+}
+
+function adjustSlider(id, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // Zjistíme aktuální hodnotu a krok
+    let val = parseFloat(el.value) || 0;
+    let step = parseFloat(el.step) || 1;
+    
+    // Pokud je delta jen 1/-1, vynásobíme ji krokem pro přirozený posun
+    const finalDelta = (Math.abs(delta) === 1) ? delta * step : delta;
+    
+    let newVal = val + finalDelta;
+    
+    // Ošetření min/max
+    const min = parseFloat(el.min);
+    const max = parseFloat(el.max);
+    if (!isNaN(min) && newVal < min) newVal = min;
+    if (!isNaN(max) && newVal > max) newVal = max;
+    
+    el.value = newVal;
+    
+    // Vyvoláme eventy, aby se spustila logika v generator.js
+    el.dispatchEvent(new Event('input'));
+    el.dispatchEvent(new Event('change'));
+}
+
+function updateValueBadge(id, value) {
+    const badge = document.getElementById('val-' + id);
+    if (badge) {
+        // Formátování: Pokud je to měřítko/průhlednost v %, přidáme %, jinak mm nebo jen číslo
+        let suffix = '';
+        if (id.includes('scale') || id.includes('opacity') || id.includes('spacing') || id.includes('offset-x') || id.includes('offset-y')) suffix = '%';
+        else if (id.includes('offsetX') || id.includes('offsetY') || id.includes('columnX') || id.includes('inset')) suffix = 'mm';
+        else if (id.includes('borderWidth') || id.includes('border-width')) suffix = 'px';
+        else if (id.includes('size')) suffix = ''; // Generic size usually factor or px
+        
+        badge.innerText = value + suffix;
+    }
+}
+
+function createCardElement(card) {
+    const scaleUi = 3.8; 
+    const cardEl = document.createElement('div');
+    cardEl.className = 'preview-card';
+    if (AppState.activeCardId === card.id) cardEl.classList.add('active');
+    if (card.isLocked) cardEl.classList.add('is-locked');
+    cardEl.id = 'card-el-' + card.id;
+    cardEl.style.width = Math.round(AppState.cardWidth * scaleUi) + 'px';
+    cardEl.style.height = Math.round(AppState.cardHeight * scaleUi) + 'px';
+    cardEl.style.borderRadius = Math.round(AppState.cardRadius * scaleUi) + 'px';
+
+    // VRSTVA 0: ILUSTRACE
+    const bgLayer = document.createElement('div');
+    bgLayer.className = 'card-bg';
+    if (card.image) {
+        const img = document.createElement('img');
+        img.src = card.image;
+        const c = card.crop;
+        img.style.transform = `translate(calc(-50% + ${c.x}px), calc(-50% + ${c.y}px)) scale(${c.scale * c.stretchX}, ${c.scale * c.stretchY})`;
+        bgLayer.appendChild(img);
+    }
+    cardEl.appendChild(bgLayer);
+
+    // VRSTVA 1: GLOBÁLNÍ LOGO
+    if (AppState.globalLogo.image) {
+        const logo = document.createElement('div');
+        logo.className = 'card-logo';
+        logo.style.backgroundImage = `url(${AppState.globalLogo.image})`;
+        logo.style.opacity = AppState.globalLogo.opacity;
+        const l = AppState.globalLogo;
+        logo.style.transform = `translate(calc(-50% + ${l.x}px), calc(-50% + ${l.y}px)) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
+        cardEl.appendChild(logo);
+    }
+
+    // VRSTVA 2: GLOBÁLNÍ RÁM
+    const overlay = document.createElement('div');
+    overlay.className = 'card-overlay';
+    cardEl.appendChild(overlay); 
+    
+    const suit = normalizedSuit(card.id.split('_')[0]);
+    const sS = getSuitConfig(suit);
+    const gO = AppState.globalOverlay;
+    
+    // Použijeme nastavení barvy (suit) pokud existuje a má nastavenou šířku ohraničení > 0, jinak globální
+    const activeBorderWidth = (sS && sS.borderWidth > 0) ? sS.borderWidth : gO.borderWidth;
+    const activeBorderColor = (sS && sS.borderWidth > 0) ? sS.borderColor : gO.borderColor;
+    const activeInset = (sS && sS.borderWidth > 0) ? sS.inset : gO.inset;
+    const activeBorderRadius = (sS && sS.borderWidth > 0) ? sS.borderRadius : gO.borderRadius;
+    
+    overlay.style.opacity = gO.opacity;
+    overlay.style.border = (activeBorderWidth > 0) ? `${activeBorderWidth * scaleUi}px solid ${activeBorderColor}` : 'none';
+    overlay.style.boxSizing = 'border-box';
+
+    const insetPx = activeInset * (scaleUi * 3.78);
+    const brPx = activeBorderRadius * (scaleUi * 3.78);
+    
+    overlay.style.top = insetPx + 'px';
+    overlay.style.left = insetPx + 'px';
+    overlay.style.width = `calc(100% - ${2 * insetPx}px)`;
+    overlay.style.height = `calc(100% - ${2 * insetPx}px)`;
+    overlay.style.borderRadius = brPx + 'px';
+
+    if (gO.image) {
+        overlay.style.backgroundImage = `url(${gO.image})`;
+        overlay.style.transform = `translate(${gO.x * scaleUi}px, ${gO.y * scaleUi}px) scale(${gO.scale * gO.stretchX}, ${gO.scale * gO.stretchY})`;
+        overlay.style.transformOrigin = 'center';
+    } else {
+        overlay.style.backgroundImage = 'none';
+    }
+    
+    // VRSTVA 3: DYNAMICKÉ SYMBOLY
+    if (AppState.gameMode === 'quartet') {
+        drawQuartetOverlay(cardEl, card);
+    } else if (AppState.showSymbols) {
+        drawSymbols(cardEl, card);
+    }
+
+    const label = document.createElement('div');
+    label.className = 'card-label'; label.innerText = card.label;
+    cardEl.appendChild(label);
+
+    const dropZone = document.createElement('div');
+    dropZone.className = 'drop-zone-overlay';
+    cardEl.appendChild(dropZone);
+
+    cardEl.addEventListener('mousedown', (e) => setActiveCard(card.id, e));
+    cardEl.addEventListener('dragover', (e) => { e.preventDefault(); cardEl.classList.add('drag-over'); });
+    cardEl.addEventListener('dragleave', () => cardEl.classList.remove('drag-over'));
+    cardEl.addEventListener('drop', (e) => handleImageDrop(card.id, e));
+
+    return cardEl;
+}
+
+function renderCard(cardId) {
+    const card = AppState.cards.find(c => c.id === cardId);
+    if (!card) return;
+    const oldCardEl = document.getElementById('card-el-' + cardId);
+    if (oldCardEl) {
+        const newCardEl = createCardElement(card);
+        oldCardEl.replaceWith(newCardEl);
+    }
+}
+
+let cardRenderRequests = new Set();
+function requestCardRender(cardId) {
+    cardRenderRequests.add(cardId);
+    requestAnimationFrame(() => {
+        if (cardRenderRequests.size === 0) return;
+        cardRenderRequests.forEach(id => renderCard(id));
+        cardRenderRequests.clear();
+    });
+}
+
 function renderGrid() {
     const grid = document.getElementById('cards-grid');
     if (!grid) return;
-    grid.innerHTML = '';
-    const scaleUi = 3.8; 
-
+    
+    const fragment = document.createDocumentFragment();
     AppState.cards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'preview-card';
-        if (AppState.activeCardId === card.id) cardEl.classList.add('active');
-        if (card.isLocked) cardEl.classList.add('is-locked');
-        cardEl.id = 'card-el-' + card.id;
-        cardEl.style.width = Math.round(AppState.cardWidth * scaleUi) + 'px';
-        cardEl.style.height = Math.round(AppState.cardHeight * scaleUi) + 'px';
-        cardEl.style.borderRadius = Math.round(AppState.cardRadius * scaleUi) + 'px';
-
-        // ZÁKLADNÍ VRSTVY ZÁVISÍ NA REŽIMU (Front vs Back)
-        if (AppState.viewMode === 'back') {
-            const bs = AppState.backSideSettings;
-            
-            // BACK VRSTVA 0: ILUSTRACE (Rub)
-            const bgLayer = document.createElement('div');
-            bgLayer.className = 'card-bg';
-            if (bs && bs.image) {
-                const img = document.createElement('img');
-                img.src = bs.image;
-                const c = bs.crop;
-                img.style.transform = `translate(calc(-50% + ${c.x}px), calc(-50% + ${c.y}px)) scale(${c.scale * c.stretchX}, ${c.scale * c.stretchY})`;
-                bgLayer.appendChild(img);
-            }
-            cardEl.appendChild(bgLayer);
-
-            // BACK VRSTVA 1: LOGO
-            if (bs && bs.logo && bs.logo.image) {
-                const logo = document.createElement('div');
-                logo.className = 'card-logo';
-                logo.style.backgroundImage = `url(${bs.logo.image})`;
-                logo.style.opacity = bs.logo.opacity;
-                const l = bs.logo;
-                logo.style.transform = `translate(calc(-50% + ${l.x}px), calc(-50% + ${l.y}px)) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
-                cardEl.appendChild(logo);
-            }
-
-            // BACK VRSTVA 2: OVERLAY
-            if (bs && bs.overlay) {
-                const overlay = document.createElement('div');
-                overlay.className = 'card-overlay';
-                cardEl.appendChild(overlay); 
-                
-                const gO = bs.overlay;
-                overlay.style.opacity = gO.opacity;
-                overlay.style.border = (gO.borderWidth > 0) ? `${gO.borderWidth * scaleUi}px solid ${gO.borderColor}` : 'none';
-                overlay.style.boxSizing = 'border-box';
-
-                const insetPx = gO.inset * (scaleUi * 3.78);
-                const brPx = gO.borderRadius * (scaleUi * 3.78);
-                
-                overlay.style.top = insetPx + 'px';
-                overlay.style.left = insetPx + 'px';
-                overlay.style.width = `calc(100% - ${2 * insetPx}px)`;
-                overlay.style.height = `calc(100% - ${2 * insetPx}px)`;
-                overlay.style.borderRadius = brPx + 'px';
-                overlay.style.transform = 'none';
-
-                if (gO.image) {
-                    overlay.style.backgroundImage = `url(${gO.image})`;
-                    overlay.style.transform = `translate(${gO.x * scaleUi}px, ${gO.y * scaleUi}px) scale(${gO.scale * gO.stretchX}, ${gO.scale * gO.stretchY})`;
-                    overlay.style.transformOrigin = 'center';
-                }
-            }
-        } else {
-            // FRONT VRSTVA 0: ILUSTRACE
-            const bgLayer = document.createElement('div');
-            bgLayer.className = 'card-bg';
-            if (card.image) {
-                const img = document.createElement('img');
-                img.src = card.image;
-                const c = card.crop;
-                img.style.transform = `translate(calc(-50% + ${c.x}px), calc(-50% + ${c.y}px)) scale(${c.scale * c.stretchX}, ${c.scale * c.stretchY})`;
-                bgLayer.appendChild(img);
-            }
-            cardEl.appendChild(bgLayer);
-
-            // FRONT VRSTVA 1: GLOBÁLNÍ LOGO
-            if (AppState.globalLogo.image) {
-                const logo = document.createElement('div');
-                logo.className = 'card-logo';
-                logo.style.backgroundImage = `url(${AppState.globalLogo.image})`;
-                logo.style.opacity = AppState.globalLogo.opacity;
-                const l = AppState.globalLogo;
-                logo.style.transform = `translate(calc(-50% + ${l.x}px), calc(-50% + ${l.y}px)) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
-                cardEl.appendChild(logo);
-            }
-
-            // FRONT VRSTVA 2: GLOBÁLNÍ RÁM (s prioritou barvy)
-            const overlay = document.createElement('div');
-            overlay.className = 'card-overlay';
-            cardEl.appendChild(overlay); 
-            
-            const suit = card.id.split('_')[0];
-            const sS = AppState.suitSettings[suit];
-            const gO = AppState.globalOverlay;
-            
-            const activeBorderWidth = (sS && sS.borderWidth > 0) ? sS.borderWidth : gO.borderWidth;
-            const activeBorderColor = (sS && sS.borderWidth > 0) ? sS.borderColor : gO.borderColor;
-            const activeInset = (sS && sS.borderWidth > 0) ? sS.inset : gO.inset;
-            const activeBorderRadius = (sS && sS.borderWidth > 0) ? sS.borderRadius : gO.borderRadius;
-            
-            overlay.style.opacity = gO.opacity;
-            overlay.style.border = (activeBorderWidth > 0) ? `${activeBorderWidth * scaleUi}px solid ${activeBorderColor}` : 'none';
-            overlay.style.boxSizing = 'border-box';
-
-            const insetPx = activeInset * (scaleUi * 3.78);
-            const brPx = activeBorderRadius * (scaleUi * 3.78);
-            
-            overlay.style.top = insetPx + 'px';
-            overlay.style.left = insetPx + 'px';
-            overlay.style.width = `calc(100% - ${2 * insetPx}px)`;
-            overlay.style.height = `calc(100% - ${2 * insetPx}px)`;
-            overlay.style.borderRadius = brPx + 'px';
-            overlay.style.transform = 'none';
-
-            if (gO.image) {
-                overlay.style.backgroundImage = `url(${gO.image})`;
-                overlay.style.transform = `translate(${gO.x * scaleUi}px, ${gO.y * scaleUi}px) scale(${gO.scale * gO.stretchX}, ${gO.scale * gO.stretchY})`;
-                overlay.style.transformOrigin = 'center';
-            }
-            
-            // FRONT VRSTVA 3: DYNAMICKÉ SYMBOLY
-            if (AppState.gameMode === 'quartet') {
-                drawQuartetOverlay(cardEl, card);
-            } else if (AppState.gameMode === 'pexeso') {
-                drawPexesoOverlay(cardEl, card);
-            } else if (AppState.showSymbols) {
-                drawSymbols(cardEl, card);
-            }
-        }
-
-        const label = document.createElement('div');
-        label.className = 'card-label'; label.innerText = card.label;
-        cardEl.appendChild(label);
-
-        const dropZone = document.createElement('div');
-        dropZone.className = 'drop-zone-overlay';
-        cardEl.appendChild(dropZone);
-
-        cardEl.addEventListener('mousedown', (e) => setActiveCard(card.id, e));
-        cardEl.addEventListener('dragover', (e) => { e.preventDefault(); cardEl.classList.add('drag-over'); });
-        cardEl.addEventListener('dragleave', () => cardEl.classList.remove('drag-over'));
-        cardEl.addEventListener('drop', (e) => handleImageDrop(card.id, e));
-        grid.appendChild(cardEl);
+        fragment.appendChild(createCardElement(card));
     });
+    
+    grid.innerHTML = '';
+    grid.appendChild(fragment);
 }
 
 function drawSymbols(cardEl, card) {
@@ -189,14 +239,14 @@ function drawSymbols(cardEl, card) {
     symbolsCont.className = 'card-symbols';
     
     const parts = card.id.split('_');
-    const suit = parts[0];
+    const suit = normalizedSuit(parts[0]);
     const val = parts[1];
     
-    // Konfigurace Barvy (Suit)
-    const suitCfg = AppState.suitSettings[suit] || { opacity: 1, scale: 0.18, color: '#fff', offsetY:0, spacingY:1, columnX:0 };
+    // Konfigurace Barvy (Suit) - Vždy získáme aktuální objekt ze stavu
+    const suitCfg = getSuitConfig(suit) || { opacity: 1, scale: 0.18, color: '#ff0000', offsetY:0, spacingY:1, columnX:0 };
     
     // Konfigurace Hodnoty (Value) - Globální nebo Individuální
-    let valCfg = AppState.valueSettings[val] || { offsetY:0, spacingY:1, columnX:0, scale: null, opacity: null };
+    let valCfg = AppState.valueSettings[val] || { offsetY:0, spacingY:1, columnX:0 };
     if (card.symbolOverride) valCfg = card.symbolOverride;
 
     const layout = SYMBOL_LAYOUTS[val] || [];
@@ -221,12 +271,12 @@ function drawSymbols(cardEl, card) {
             fColumnX  = card.symbolOverride.columnX;
         } else {
             // STANDARDNÍ KOMBINACE: Globální * (Hodnota + Barva)
-            // Scale a Opacity jsou multiplikativní pro globální level
-            const baseScale = (valCfg.scale !== null && valCfg.scale !== undefined) ? valCfg.scale : suitCfg.scale;
-            fScale = baseScale * gS.scale;
+            // Scale a Opacity jsou multiplikativní: Suit * Global (Value scale je prioritní pokud existuje)
+            const baseScale = (valCfg.scale !== null && valCfg.scale !== undefined) ? valCfg.scale : (suitCfg.scale || 0.18);
+            fScale = baseScale * (gS.scale || 1);
             
-            const baseOpacity = (valCfg.opacity !== null && valCfg.opacity !== undefined) ? valCfg.opacity : suitCfg.opacity;
-            fOpacity = baseOpacity * gS.opacity;
+            const baseOpacity = (valCfg.opacity !== null && valCfg.opacity !== undefined) ? valCfg.opacity : (suitCfg.opacity !== undefined ? suitCfg.opacity : 1);
+            fOpacity = baseOpacity * (gS.opacity !== undefined ? gS.opacity : 1);
 
             // Offsety jsou aditivní
             fOffsetX  = (valCfg.offsetX || 0) + (suitCfg.offsetX || 0) + gS.offsetX;
@@ -262,10 +312,20 @@ function drawSymbols(cardEl, card) {
             img.style.width = (fScale * 600) + 'px'; 
             symbol.appendChild(img);
         } else {
-            const iconMap = { 'Srdce':'♥', 'Piky':'♠', 'Kule':'♦', 'Žaludy':'♣', 
-                             'zelene':'♠', 'kule':'♦', 'zaludy':'♣', 'srdce':'♥' };
-            symbol.innerText = iconMap[suit] || iconMap[suit.toLowerCase()] || '';
-            symbol.style.color = suitCfg.color;
+            const iconMap = { 
+                'Červené': '♥', 
+                'Zelené':  '🍃', 
+                'Kule':    '●', 
+                'Žaludy':  '🌰',
+                'Srdce':   '♥', 
+                'Piky':    '♠' 
+            };
+            // Pro jistotu normalizujeme i klíče v mapě (při runtime to sjednotí na NFC)
+            const nIconMap = {};
+            for(let key in iconMap) nIconMap[normalizedSuit(key)] = iconMap[key];
+
+            symbol.innerText = nIconMap[suit] || nIconMap[suit.toLowerCase()] || '';
+            symbol.style.color = suitCfg.color || '#ff0000';
             symbol.style.fontSize = (fScale * 300) + 'px';
         }
         symbolsCont.appendChild(symbol);
@@ -364,7 +424,7 @@ function drawQuartetOverlay(cardEl, card) {
         const statsWrapper = document.createElement('div');
         statsWrapper.className = `layout-wrapper-${statLayout}`;
         
-        if (statLayout === 'bottom-row' || statLayout === 'left-column' || statLayout === 'right-column' || statLayout === 'grid-2x2') {
+        if (statLayout === 'bottom-row' || statLayout === 'left-column' || statLayout === 'right-column') {
             statsWrapper.style.gap = `${statSpacing}px`;
         }
         statsWrapper.style.textRendering = 'optimizeLegibility';
@@ -484,31 +544,41 @@ function updateLayoutParam(param, value) {
     else if (param === 'spacingY') cfg.spacingY = v / 100;
     else if (param === 'columnX') cfg.columnX = v;
     
+    debouncedSaveState();
+    requestRender();
+}
+
+function toggleIndividualOverride(enabled) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+
+    if (enabled) {
+        const parts = card.id.split('_');
+        const suit = parts[0];
+        const val = parts[1] || '7';
+        const globalVal = AppState.valueSettings[val] || {offsetY:0, spacingY:1, columnX:0};
+        const globalSuit = AppState.suitSettings[suit] || {scale: 0.18, opacity: 1, offsetY:0, spacingY:1, columnX:0};
+        card.symbolOverride = { 
+            offsetX: globalVal.offsetX || 0,
+            offsetY: globalVal.offsetY,
+            spacingY: globalVal.spacingY,
+            columnX: globalVal.columnX,
+            scale: globalSuit.scale, 
+            opacity: globalSuit.opacity 
+        }; 
+    } else {
+        card.symbolOverride = null;
+    }
     saveState();
+    renderUIFromState();
     renderGrid();
 }
 
 function updateIndividualParam(param, value) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
-    if (!card) return;
-
-    // Pokud override neexistuje, vytvoříme ho na základě aktuální hodnoty/barvy
-    if (!card.symbolOverride) {
-        const parts = card.id.split('_');
-        const suit = parts[0];
-        const val = parts[1] || '7';
-        const gV = AppState.valueSettings[val] || {offsetY:0, spacingY:1, columnX:0};
-        const gS = AppState.suitSettings[suit] || {scale: 0.18, opacity: 1, offsetY:0, spacingY:1, columnX:0};
-        card.symbolOverride = { 
-            offsetX: gV.offsetX || 0,
-            offsetY: gV.offsetY,
-            spacingY: gV.spacingY,
-            columnX: gV.columnX,
-            scale: gS.scale, 
-            opacity: gS.opacity 
-        };
-    }
+    if (!card || !card.symbolOverride) return;
 
     const val = parseFloat(value);
     if (param === 'scale') card.symbolOverride.scale = val / 100;
@@ -516,32 +586,12 @@ function updateIndividualParam(param, value) {
     else if (param === 'spacingY') card.symbolOverride.spacingY = val / 100;
     else if (['offsetX', 'offsetY', 'columnX'].includes(param)) card.symbolOverride[param] = val;
     
-    saveState();
-    renderGrid();
-}
-
-function toggleCardLock(checked) {
-    if (!AppState.activeCardId) return;
-    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
-    if (card) {
-        card.isLocked = checked;
-        saveState();
-        renderUIFromState();
-    }
-}
-
-function resetIndividualOverride() {
-    if (!AppState.activeCardId) return;
-    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
-    if (card) {
-        card.symbolOverride = null;
-        saveState();
-        renderUIFromState();
-    }
+    debouncedSaveState();
+    requestCardRender(card.id);
 }
 
 function resetIndividualLayout() {
-    resetIndividualOverride();
+    toggleIndividualOverride(false);
 }
 
 // --- SUIT HANDLERS ---
@@ -555,20 +605,29 @@ function handleSuitUpload(suit, event) {
     }
 }
 
-function updateSuitParam(suit, param, value) {
-    if (param === 'scale') {
-        AppState.suitSettings[suit].scale = parseFloat(value) / 100;
-    } else if (param === 'opacity') {
-        AppState.suitSettings[suit].opacity = parseFloat(value) / 100;
-    } else if (param === 'spacingY') {
-        AppState.suitSettings[suit].spacingY = parseFloat(value) / 100;
-    } else if (['borderColor'].includes(param)) {
-        AppState.suitSettings[suit][param] = value;
-    } else if (['offsetX', 'offsetY', 'columnX', 'borderWidth', 'inset', 'borderRadius'].includes(param)) {
-        AppState.suitSettings[suit][param] = parseFloat(value);
+function updateSuitParam(suitRaw, param, value) {
+    const suit = normalizedSuit(suitRaw);
+    let sS = getSuitConfig(suit);
+    
+    if (!sS) {
+        console.warn("Suit settings not found for:", suit, "Creating new entry.");
+        AppState.suitSettings[suit] = { image: null, opacity: 1, scale: 0.18, color: '#ff0000', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ff0000', borderWidth: 0, inset: 0, borderRadius: 4 };
+        sS = AppState.suitSettings[suit];
     }
-    saveState();
-    renderGrid();
+
+    if (param === 'scale') {
+        sS.scale = parseFloat(value) / 100;
+    } else if (param === 'opacity') {
+        sS.opacity = parseFloat(value) / 100;
+    } else if (param === 'spacingY') {
+        sS.spacingY = parseFloat(value) / 100;
+    } else if (['borderColor'].includes(param)) {
+        sS[param] = value;
+    } else if (['offsetX', 'offsetY', 'columnX', 'borderWidth', 'inset', 'borderRadius'].includes(param)) {
+        sS[param] = parseFloat(value);
+    }
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateGlobalSymbolParam(param, value) {
@@ -578,8 +637,8 @@ function updateGlobalSymbolParam(param, value) {
     } else {
         gs[param] = parseFloat(value);
     }
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 // --- STANDARD HANDLERS ---
@@ -613,15 +672,15 @@ function updateGlobalOverlayParam(param, value) {
     } else { // For x, y, stretchX, stretchY
         AppState.globalOverlay[param] = parseFloat(value);
     }
-    saveState(); 
-    renderGrid();
+    debouncedSaveState(); 
+    requestRender();
 }
 
 function handleLogoUpload(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => { AppState.globalLogo.image = e.target.result; renderGrid(); };
+        reader.onload = (e) => { AppState.globalLogo.image = e.target.result; requestRender(); };
         reader.readAsDataURL(file);
     }
 }
@@ -632,103 +691,10 @@ function updateLogo() {
     l.x = parseFloat(document.getElementById('logo-x').value) || 0;
     l.y = parseFloat(document.getElementById('logo-y').value) || 0;
     l.scale = (parseFloat(document.getElementById('logo-zoom').value) || 30) / 100;
-    renderGrid();
+    requestRender();
 }
 
-// --- ZADNÍ STRANA HANDLERS ---
-function switchViewMode(mode) {
-    if (AppState.viewMode === mode) return;
-    AppState.viewMode = mode;
-    
-    // Update tabs UI
-    document.getElementById('tab-front').classList.toggle('active', mode === 'front');
-    document.getElementById('tab-back').classList.toggle('active', mode === 'back');
-    document.getElementById('tab-front').style.borderBottom = mode === 'front' ? '2px solid var(--accent)' : '2px solid transparent';
-    document.getElementById('tab-back').style.borderBottom = mode === 'back' ? '2px solid var(--accent)' : '2px solid transparent';
-    document.getElementById('tab-front').style.color = mode === 'front' ? '#121212' : '#aaa';
-    document.getElementById('tab-front').style.background = mode === 'front' ? 'var(--accent)' : 'transparent';
-    document.getElementById('tab-back').style.color = mode === 'back' ? '#121212' : '#aaa';
-    document.getElementById('tab-back').style.background = mode === 'back' ? 'var(--accent)' : 'transparent';
-
-    // Show/hide panels
-    document.getElementById('front-side-panels').style.display = mode === 'front' ? 'block' : 'none';
-    document.getElementById('back-side-panels').style.display = mode === 'back' ? 'block' : 'none';
-
-    renderGrid();
-}
-
-function handleBackImageUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { 
-            AppState.backSideSettings.image = e.target.result; 
-            saveState();
-            renderGrid(); 
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function updateBackImageParam(param, value) {
-    if (param === 'scale') AppState.backSideSettings.crop.scale = parseFloat(value) / 100;
-    else AppState.backSideSettings.crop[param] = parseFloat(value);
-    saveState();
-    renderGrid();
-}
-
-function resetBackImage() {
-    AppState.backSideSettings.image = null;
-    AppState.backSideSettings.crop = { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 };
-    saveState();
-    renderUIFromState(); // reset sliders
-}
-
-function updateBackOverlayParam(param, value) {
-    if (param === 'borderColor') AppState.backSideSettings.overlay[param] = value;
-    else AppState.backSideSettings.overlay[param] = parseFloat(value);
-    saveState();
-    renderGrid();
-}
-
-function handleBackOverlayUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { AppState.backSideSettings.overlay.image = e.target.result; saveState(); renderGrid(); };
-        reader.readAsDataURL(file);
-    }
-}
-
-function updateBackOverlay() {
-    const o = AppState.backSideSettings.overlay;
-    o.opacity = (parseFloat(document.getElementById('back-overlay-opacity').value) || 0) / 100;
-    o.x = parseFloat(document.getElementById('back-overlay-x').value) || 0;
-    o.y = parseFloat(document.getElementById('back-overlay-y').value) || 0;
-    saveState();
-    renderGrid();
-}
-
-function handleBackLogoUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { AppState.backSideSettings.logo.image = e.target.result; saveState(); renderGrid(); };
-        reader.readAsDataURL(file);
-    }
-}
-
-function updateBackLogo() {
-    const l = AppState.backSideSettings.logo;
-    l.opacity = (parseFloat(document.getElementById('back-logo-opacity').value) || 0) / 100;
-    l.x = parseFloat(document.getElementById('back-logo-x').value) || 0;
-    l.y = parseFloat(document.getElementById('back-logo-y').value) || 0;
-    l.scale = (parseFloat(document.getElementById('back-logo-zoom').value) || 30) / 100;
-    saveState();
-    renderGrid();
-}
-
-function toggleSymbols(show) { AppState.showSymbols = show; renderGrid(); }
+function toggleSymbols(show) { AppState.showSymbols = show; requestRender(); }
 
 function fillActiveCard() {
     if (!AppState.activeCardId) return;
@@ -742,7 +708,7 @@ function fillActiveCard() {
         const ratioTarget = targetW / targetH;
         let finalScale = (ratioImg > ratioTarget) ? (targetH * 3.8 / img.naturalHeight) : (targetW * 3.8 / img.naturalWidth);
         card.crop.scale = finalScale; card.crop.x = 0; card.crop.y = 0;
-        saveState(); renderUIFromState();
+        debouncedSaveState(); renderUIFromState();
     };
 }
 
@@ -750,7 +716,7 @@ function updateGlobalDimensions() {
     AppState.cardWidth = parseFloat(document.getElementById('card-width').value) || 63;
     AppState.cardHeight = parseFloat(document.getElementById('card-height').value) || 88;
     AppState.cardRadius = parseFloat(document.getElementById('card-radius').value) || 4;
-    saveState(); renderGrid();
+    debouncedSaveState(); requestRender();
 }
 
 function toggleCardLock(locked) {
@@ -776,8 +742,104 @@ function toggleCardLock(locked) {
                  opacity: (vS.opacity !== null && vS.opacity !== undefined) ? vS.opacity : sS.opacity
             };
         }
-        saveState();
+        debouncedSaveState();
         renderUIFromState();
+    }
+}
+
+async function downloadAllAsZip() {
+    const cards = AppState.cards;
+    const zip = new JSZip();
+    const overlay = document.getElementById('progress-overlay');
+    const barFill = document.getElementById('progress-bar-fill');
+    const status = document.getElementById('progress-status');
+    const total = cards.length;
+
+    if (!overlay || !barFill || !status) return;
+
+    overlay.style.display = 'flex';
+    
+    try {
+        for (let i = 0; i < total; i++) {
+            const card = cards[i];
+            
+            // Aktualizace statusu
+            status.innerText = `Zpracovávám kartu ${i + 1} / ${total} (${card.label})`;
+            barFill.style.width = `${((i + 1) / total) * 100}%`;
+
+            const cardId = 'card-el-' + card.id;
+            let cardEl = document.getElementById(cardId);
+            
+            if (!cardEl) {
+                console.warn("Card element not found in grid:", card.id);
+                continue;
+            }
+
+            try {
+                // Renderování pomocí html2canvas (scale 3 je bezpečnější pro paměť)
+                const canvas = await html2canvas(cardEl, {
+                    scale: 3, 
+                    backgroundColor: null,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
+                });
+
+                // Convert to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                
+                if (blob) {
+                    // Povolíme diakritiku v názvu souboru karty
+                    const fileName = `${card.id}.png`;
+                    zip.file(fileName, blob);
+                }
+            } catch (cardErr) {
+                console.error(`Chyba při renderu karty ${card.id}:`, cardErr);
+            }
+
+            // Malá pauza pro prohlížeč, aby nezamrzlo UI
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // Generování ZIPu
+        if (Object.keys(zip.files).length === 0) {
+            throw new Error("Žádné karty nebyly úspěšně vyrenderovány.");
+        }
+
+        status.innerText = "Generuji ZIP archiv...";
+        const content = await zip.generateAsync({ 
+            type: "blob",
+            compression: "STORE"
+        });
+        
+        // Vyčištění názvu projektu pro bezpečný název souboru (zachováme diakritiku)
+        const safeProjectName = (AppState.projectName || 'karetni_sada')
+            .trim()
+            .replace(/[\s/\\?%*:|"<>]/g, '_');
+
+        // Stažení
+        const fileName = `${safeProjectName}.zip`;
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Úklid po krátké prodlevě
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+
+        status.innerText = `Archiv "${fileName}" byl odeslán ke stažení.`;
+
+    } catch (err) {
+        console.error("Chyba při exportu:", err);
+        alert("Při exportu došlo k chybě. Zkuste to prosím znovu.");
+    } finally {
+        overlay.style.display = 'none';
+        barFill.style.width = '0%';
     }
 }
 
@@ -804,10 +866,12 @@ async function exportSingleCard() {
     }
 }
 
+function exportPrintSheets() {
+    window.print();
+}
+
 function setActiveCard(id, e) {
     AppState.activeCardId = id;
-    const card = AppState.cards.find(c => c.id === id);
-    // Vybíráme pouze kartu, neovlivňujeme její zámek (ten je plně manuální)
     document.querySelectorAll('.preview-card').forEach(el => el.classList.remove('active'));
     document.getElementById('card-el-' + id).classList.add('active');
     renderUIFromState(); 
@@ -816,7 +880,8 @@ function setActiveCard(id, e) {
 function handleImageDrop(cardId, e) {
     e.preventDefault();
     const card = AppState.cards.find(c => c.id === cardId);
-    if (!card) {
+    if (!card || card.isLocked) {
+        if (card && card.isLocked) alert("Tato karta je zamčená. Pro změnu obrázku ji nejdříve odemkněte.");
         return;
     }
     const file = e.dataTransfer.files[0];
@@ -826,7 +891,7 @@ function handleImageDrop(cardId, e) {
             card.image = ev.target.result; 
             card.crop = { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 }; 
             AppState.activeCardId = cardId; // Nastavíme jako aktivní, aby se UI chytlo
-            saveState(); 
+            debouncedSaveState(); 
             renderUIFromState(); 
         };
         reader.readAsDataURL(file);
@@ -841,7 +906,7 @@ function updateGlobalStretch() {
            card.crop.stretchX = sx; card.crop.stretchY = sy; 
         }
     });
-    saveState(); renderGrid();
+    debouncedSaveState(); requestRender();
 }
 
 function updateGlobalZoom() {
@@ -851,7 +916,7 @@ function updateGlobalZoom() {
             card.crop.scale = zoom; 
         }
     });
-    saveState(); renderGrid();
+    debouncedSaveState(); requestRender();
 }
 
 function handleIndividualImageUpload(event) {
@@ -863,7 +928,7 @@ function handleIndividualImageUpload(event) {
             if (card) {
                 card.image = e.target.result;
                 card.crop = { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 };
-                saveState();
+                debouncedSaveState();
                 renderUIFromState();
             }
         };
@@ -881,8 +946,8 @@ function updateIndividualImageParam(param, value) {
     if (param === 'x') card.crop.x = val;
     if (param === 'y') card.crop.y = val;
     
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestCardRender(card.id);
 }
 
 function resetIndividualImage() {
@@ -890,14 +955,20 @@ function resetIndividualImage() {
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (card) {
         card.image = null;
-        saveState();
+        debouncedSaveState();
         renderUIFromState();
     }
 }
 
 function renderUIFromState() {
     // 1. ZÁKLADNÍ NASTAVENÍ PROJEKTU
-    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    const setVal = (id, val) => { 
+        const el = document.getElementById(id); 
+        if (el) {
+            el.value = val; 
+            updateValueBadge(id, val);
+        }
+    };
     const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
 
     setVal('project-name', AppState.projectName);
@@ -931,8 +1002,10 @@ function renderUIFromState() {
     const gL = AppState.globalLogo;
     setVal('logo-opacity', Math.round(gL.opacity * 100));
 
-    // 4. PER-SUIT NASTAVENÍ (SYMBOLŮ A OHRANIČENÍ)
-    ['Srdce', 'Piky', 'Kule', 'Žaludy'].forEach(suit => {
+    // 4. PER-SUIT NASTAVENÍ    // Přechod na české barvy
+    ['Červené', 'Zelené', 'Kule', 'Žaludy'].forEach(suit => {
+        const pane = document.getElementById('suit-tab-' + suit);
+        if (!pane) return;
         const s = AppState.suitSettings[suit];
         if (!s) return;
         const p = `suit-${suit}-`;
@@ -968,13 +1041,27 @@ function renderUIFromState() {
             indPanel.style.display = 'block';
             const labelEl = document.getElementById('active-card-label');
             if (labelEl) labelEl.innerText = card.label;
-
-            setChecked('card-lock-toggle', card.isLocked);
             
+            const lockBtn = document.getElementById('card-lock-btn');
+            if (lockBtn) {
+                lockBtn.classList.toggle('locked', card.isLocked);
+                lockBtn.innerText = card.isLocked ? '🔒 Odemknout kartu' : '🔓 Zamknout kartu';
+            }
+
+            setChecked('individual-override-toggle', !!card.symbolOverride);
+            const overrideToggle = document.getElementById('individual-override-toggle');
+            if (overrideToggle) overrideToggle.disabled = card.isLocked;
+
+            const uploadBtn = document.querySelector('#individual-card-image-section .upload-btn');
+            if (uploadBtn) {
+                uploadBtn.style.opacity = card.isLocked ? 0.3 : 1;
+                uploadBtn.style.pointerEvents = card.isLocked ? 'none' : 'auto';
+            }
+
             const ctrls = document.getElementById('individual-layout-controls');
             if (ctrls) {
-                ctrls.style.opacity = 1;
-                ctrls.style.pointerEvents = 'auto';
+                ctrls.style.opacity = (card.symbolOverride && !card.isLocked) ? 1 : 0.5;
+                ctrls.style.pointerEvents = (card.symbolOverride && !card.isLocked) ? 'auto' : 'none';
             }
 
             if (card.symbolOverride) {
@@ -1050,34 +1137,7 @@ function renderUIFromState() {
         updateQuartetGroupColorUI();
     }
 
-    // 9. ZADNÍ STRANA SYNC
-    if (AppState.backSideSettings) {
-        const bs = AppState.backSideSettings;
-        setVal('back-img-scale', Math.round(bs.crop.scale * 100));
-        setVal('back-img-x', bs.crop.x);
-        setVal('back-img-y', bs.crop.y);
-        
-        const bo = bs.overlay;
-        if (bo) {
-            setVal('back-overlay-opacity', Math.round(bo.opacity * 100));
-            setVal('back-overlay-x', bo.x);
-            setVal('back-overlay-y', bo.y);
-            setVal('back-overlay-border-color', bo.borderColor);
-            setVal('back-overlay-border-width', bo.borderWidth);
-            setVal('back-overlay-inset', bo.inset);
-            setVal('back-overlay-border-radius', bo.borderRadius);
-        }
-        
-        const bl = bs.logo;
-        if (bl) {
-            setVal('back-logo-opacity', Math.round(bl.opacity * 100));
-            setVal('back-logo-x', bl.x);
-            setVal('back-logo-y', bl.y);
-            setVal('back-logo-zoom', Math.round(bl.scale * 100));
-        }
-    }
-
-    renderGrid();
+    requestRender();
 }
 
 // --- KVARTETA SPECIFIC LOGIC ---
@@ -1122,7 +1182,7 @@ function importKvartetaJSON(event) {
                 }
             });
             
-            saveState();
+            debouncedSaveState();
             renderUIFromState();
             alert(`Úspěšně naimportováno ${cardIndex} karet z JSON.`);
         } catch (err) {
@@ -1138,8 +1198,8 @@ function importKvartetaJSON(event) {
 function updateQuartetConfig(prop, value) {
     if (prop === 'statOpacity') value = parseFloat(value) / 100;
     AppState.quartetSettings[prop] = value;
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateQuartetGroupColorUI() {
@@ -1169,8 +1229,8 @@ function updateQuartetColor(color) {
          AppState.quartetSettings.sets[group] = { color: '#ffffff', borderWidth: 0, inset: 0, borderRadius: 4 };
     }
     AppState.quartetSettings.sets[group].color = color;
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateQuartetBorder(prop, value) {
@@ -1182,21 +1242,21 @@ function updateQuartetBorder(prop, value) {
     if (prop === 'borderRadius') mappedProp = 'radius';
 
     AppState.quartetSettings.border[mappedProp] = parseFloat(value);
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateQuartetLayout(prop, value) {
     if (!AppState.quartetSettings.layout) AppState.quartetSettings.layout = { offsetX: 2, offsetY: 2 };
     AppState.quartetSettings.layout[prop] = parseFloat(value);
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateQuartetAttr(index, value) {
     AppState.quartetSettings.attributeNames[index] = value;
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateActiveQuartetData(field, value, statIndex = 0) {
@@ -1211,221 +1271,13 @@ function updateActiveQuartetData(field, value, statIndex = 0) {
          card.quartetData[field] = value;
     }
     
-    saveState();
-    renderGrid();
+    debouncedSaveState();
+    requestCardRender(card.id);
 }
 
-// --- PEXESO LOGIC ---
-
-function updatePexesoConfig(prop, value) {
-    if (!AppState.pexesoSettings) {
-        AppState.pexesoSettings = {
-            pairsCount: 16,
-            showName: true,
-            showDesc: false,
-            nameOffsetX: 50, nameOffsetY: 10,
-            descOffsetX: 50, descOffsetY: 5,
-            fontFamily: "'Roboto', sans-serif"
-        };
+// Globální listener pro aktualizaci všech badge při interakci se slidery
+document.addEventListener('input', (e) => {
+    if (e.target.type === 'range') {
+        updateValueBadge(e.target.id, e.target.value);
     }
-    AppState.pexesoSettings[prop] = value;
-    saveState();
-    renderGrid();
-}
-
-function drawPexesoOverlay(cardEl, card) {
-    const cfg = AppState.pexesoSettings || {};
-    const fontFamily = cfg.fontFamily || "'Roboto', sans-serif";
-    const data = card.quartetData || { name: "", description: "" };
-
-    if (cfg.showName) {
-        const nameEl = document.createElement('h1');
-        nameEl.className = 'kvarteta-card-name';
-        nameEl.style.position = 'absolute';
-        nameEl.style.left = `${cfg.nameOffsetX || 50}%`;
-        nameEl.style.bottom = `${cfg.nameOffsetY || 10}%`;
-        nameEl.style.transform = 'translateX(-50%)';
-        nameEl.style.width = '90%';
-        nameEl.style.fontFamily = fontFamily;
-        nameEl.style.fontSize = '1.1rem';
-        nameEl.innerText = data.name || card.label;
-        cardEl.appendChild(nameEl);
-    }
-
-    if (cfg.showDesc) {
-        const descEl = document.createElement('p');
-        descEl.className = 'kvarteta-card-desc';
-        descEl.style.position = 'absolute';
-        descEl.style.left = `${cfg.descOffsetX || 50}%`;
-        descEl.style.bottom = `${cfg.descOffsetY || 5}%`;
-        descEl.style.transform = 'translateX(-50%)';
-        descEl.style.width = '80%';
-        descEl.style.fontFamily = fontFamily;
-        descEl.innerText = data.description || '';
-        cardEl.appendChild(descEl);
-    }
-}
-
-function applyGlobalCropToAllCards() {
-    if (!AppState.activeCardId) {
-        alert("Nejdříve vyberte kartu (kliknutím), jejíž ořez chcete kopírovat.");
-        return;
-    }
-    const activeCard = AppState.cards.find(c => c.id === AppState.activeCardId);
-    if (!activeCard) return;
-
-    if (!confirm("Opravdu chcete ořez této karty (přiblížení a posun) aplikovat na všechny ostatní karty v sadě?")) {
-        return;
-    }
-
-    const sourceCrop = JSON.parse(JSON.stringify(activeCard.crop));
-    
-    AppState.cards.forEach(card => {
-        card.crop = JSON.parse(JSON.stringify(sourceCrop));
-    });
-
-    saveState();
-    renderGrid();
-    alert("Ořez byl sjednocen pro celou sadu.");
-}
-
-// --- DUPLEX PRINT EXPORT ---
-
-async function exportPrintSheets() {
-    alert("Připravuji tiskové archy (líc a rub pro oboustranný tisk). Klikněte OK a vyčkejte několik vteřin...");
-
-    const printWin = window.open('', '_blank');
-    if (!printWin) {
-        alert("Prohlížeč zablokoval vyskakovací okno pro tisk. Prosím povolte jej.");
-        return;
-    }
-
-    const modeBackup = AppState.viewMode;
-    const activeBackup = AppState.activeCardId;
-    AppState.activeCardId = null; // deselect visually
-
-    // Získáme všechny styly dokumentu pro print window
-    let cssText = '';
-    for (const sheet of document.styleSheets) {
-        try {
-            if (sheet.href) {
-                cssText += `<link rel="stylesheet" href="${sheet.href}">\n`;
-            } else {
-                for (const rule of sheet.cssRules) {
-                    cssText += rule.cssText + '\n';
-                }
-            }
-        } catch(e) {}
-    }
-
-    // 1. Získejte lícové strany (HTML)
-    AppState.viewMode = 'front';
-    renderGrid();
-    await new Promise(r => setTimeout(r, 200)); // wait for dom and images
-    const frontEls = Array.from(document.getElementById('cards-grid').children).map(el => el.outerHTML);
-
-    // 2. Získejte rubové strany (HTML)
-    AppState.viewMode = 'back';
-    renderGrid();
-    await new Promise(r => setTimeout(r, 200));
-    const backEls = Array.from(document.getElementById('cards-grid').children).map(el => el.outerHTML);
-
-    // Obnovit stav
-    AppState.viewMode = modeBackup;
-    AppState.activeCardId = activeBackup;
-    renderGrid();
-
-    // Výpočet gridu (A4 v mm: s malými okraji např. 195mm x 280mm)
-    const w = AppState.cardWidth;
-    const h = AppState.cardHeight;
-    const cols = Math.floor(190 / w);
-    const rows = Math.floor(277 / h);
-    const perPage = cols * rows;
-
-    if (perPage < 1) {
-        printWin.close();
-        alert("Karty jsou příliš velké na A4.");
-        return;
-    }
-
-    // Přebudování HTML struktur do Stránek
-    let printHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Tiskové Archy - ${AppState.projectName}</title>
-        ${cssText.includes('<link') ? cssText : '<style>' + cssText + '</style>'}
-        <style>
-            @page { size: A4 portrait; margin: 10mm; }
-            body { background: white; margin: 0; padding: 0; font-family: sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .print-page { 
-                width: 190mm; height: 277mm; margin: 0 auto; 
-                display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: flex-start;
-                page-break-after: always; position: relative;
-            }
-            .preview-card { border: 0.5px dotted #ccc !important; }
-            .no-print { display: none !important; }
-        </style>
-    </head>
-    <body>
-    `;
-
-    const totalCards = AppState.cards.length;
-    const totalPages = Math.ceil(totalCards / perPage);
-
-    for (let p = 0; p < totalPages; p++) {
-        const startIdx = p * perPage;
-        const endIdx = Math.min(startIdx + perPage, totalCards);
-        
-        // --- STRÁNKA: LÍC ---
-        printHtml += `<div class="print-page front-page">\n`;
-        for (let i = startIdx; i < endIdx; i++) {
-            printHtml += frontEls[i];
-        }
-        printHtml += `</div>\n`;
-
-        // --- STRÁNKA: RUB ---
-        printHtml += `<div class="print-page back-page">\n`;
-        
-        let backPageItems = [];
-        for (let i = startIdx; i < endIdx; i++) {
-            backPageItems.push(backEls[i]);
-        }
-        
-        // Nutné zrcadlení řádků pro lícování
-        let mirroredBackItems = [];
-        const itemsInThisPage = backPageItems.length;
-        const completeRows = Math.floor(itemsInThisPage / cols);
-        
-        for (let r = 0; r < completeRows; r++) {
-            let rowItems = backPageItems.slice(r * cols, (r + 1) * cols);
-            rowItems.reverse(); // zrcadlíme horizontálně
-            mirroredBackItems.push(...rowItems);
-        }
-        
-        const remaining = itemsInThisPage % cols;
-        if (remaining > 0) {
-            let rowItems = backPageItems.slice(completeRows * cols);
-            rowItems.reverse();
-            // Prázdná místa na rubu musí zůstat vlevo, aby seděla karta zprava líce, 
-            // proto přidáme "prázdné" prvky na začátek
-            let pad = cols - remaining;
-            let paddedRow = new Array(pad).fill(`<div style="width:${Math.round(w*3.8)}px; height:${Math.round(h*3.8)}px;"></div>`);
-            paddedRow.push(...rowItems);
-            mirroredBackItems.push(...paddedRow);
-        }
-
-        printHtml += mirroredBackItems.join('\n');
-        printHtml += `</div>\n`;
-    }
-
-    printHtml += `
-        <script>
-            window.onload = () => { setTimeout(() => { window.print(); }, 1000); };
-        </script>
-    </body></html>`;
-
-    printWin.document.open();
-    printWin.document.write(printHtml);
-    printWin.document.close();
-}
+});

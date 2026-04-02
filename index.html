@@ -13,6 +13,7 @@
     
     <!-- Knihovny pro Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -48,13 +49,6 @@
     <main class="main-layout">
         <!-- Boční Panel (Globální Nastavení) -->
         <aside class="sidebar">
-            <!-- PŘEPÍNAČ STRAN -->
-            <div class="sidebar-tabs" style="display: flex; margin-bottom: 15px; background: rgba(0,0,0,0.2); border-radius: 4px; overflow: hidden; border: 1px solid var(--border);">
-                <button id="tab-front" onclick="switchViewMode('front')" style="flex:1; padding:10px; border:none; background:var(--accent); color:#121212; font-weight:bold; cursor:pointer; transition:all 0.2s;">Přední strany</button>
-                <button id="tab-back" onclick="switchViewMode('back')" style="flex:1; padding:10px; border:none; background:transparent; color:#aaa; font-weight:bold; cursor:pointer; transition:all 0.2s;">Zadní strana</button>
-            </div>
-
-            <div id="front-side-panels">
             <div class="panel-section">
                 <h3>Typ Hry a Rozložení</h3>
                 <div class="control-row">
@@ -173,129 +167,140 @@
 
                 <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Umístění prvků</h4>
                 <div class="control-label-group">Označení karty (ID)</div>
-                <div class="control-row">
-                    <label>Pozice X (%)</label>
-                    <input type="range" id="quartet-id-offset-x" oninput="updateQuartetConfig('idOffsetX', this.value)" min="0" max="100" value="50" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Pozice X (%)</label>
+                        <span class="value-badge" id="val-quartet-id-offset-x">50%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-id-offset-x" oninput="updateQuartetConfig('idOffsetX', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="50" step="1" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Pozice Y (%)</label>
-                    <input type="range" id="quartet-id-offset-y" oninput="updateQuartetConfig('idOffsetY', this.value)" min="0" max="100" value="2" step="1">
-                </div>
-
-                <div class="control-label-group" style="margin-top:10px;">Název a Popisek</div>
-                <div class="control-row">
-                    <label>Název X (%)</label>
-                    <input type="range" id="quartet-name-offset-x" oninput="updateQuartetConfig('nameOffsetX', this.value)" min="0" max="100" value="50" step="1">
-                </div>
-                <div class="control-row">
-                    <label>Název Y (%)</label>
-                    <input type="range" id="quartet-name-offset-y" oninput="updateQuartetConfig('nameOffsetY', this.value)" min="0" max="100" value="12" step="1">
-                </div>
-                <div class="control-row">
-                    <label>Popisek X (%)</label>
-                    <input type="range" id="quartet-desc-offset-x" oninput="updateQuartetConfig('descOffsetX', this.value)" min="0" max="100" value="50" step="1">
-                </div>
-                <div class="control-row">
-                    <label>Popisek Y (%)</label>
-                    <input type="range" id="quartet-desc-offset-y" oninput="updateQuartetConfig('descOffsetY', this.value)" min="0" max="100" value="5" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Pozice Y (%)</label>
+                        <span class="value-badge" id="val-quartet-id-offset-y">2%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-id-offset-y" oninput="updateQuartetConfig('idOffsetY', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="2" step="1" style="width:100%;">
+                    </div>
                 </div>
 
-                <div class="control-row" style="margin-top:15px;">
+                <div class="control-label-group" style="margin-top:20px;">Název a Popisek</div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Název X (%)</label>
+                        <span class="value-badge" id="val-quartet-name-offset-x">50%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-name-offset-x" oninput="updateQuartetConfig('nameOffsetX', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="50" step="1" style="width:100%;">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Název Y (%)</label>
+                        <span class="value-badge" id="val-quartet-name-offset-y">12%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-name-offset-y" oninput="updateQuartetConfig('nameOffsetY', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="12" step="1" style="width:100%;">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Popisek X (%)</label>
+                        <span class="value-badge" id="val-quartet-desc-offset-x">50%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-desc-offset-x" oninput="updateQuartetConfig('descOffsetX', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="50" step="1" style="width:100%;">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Popisek Y (%)</label>
+                        <span class="value-badge" id="val-quartet-desc-offset-y">5%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-desc-offset-y" oninput="updateQuartetConfig('descOffsetY', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="5" step="1" style="width:100%;">
+                    </div>
+                </div>
+
+                <div class="control-row" style="margin-top:20px;">
                     <label>Rozložení vlastností</label>
                     <select id="quartet-stat-layout" class="dropdown" onchange="updateQuartetConfig('statLayout', this.value)">
                         <option value="corners">V rozích (Klasika)</option>
                         <option value="bottom-row">V řadě dole</option>
-                        <option value="grid-2x2">Mřížka 2x2 dole</option>
                         <option value="left-column">Sloupec vlevo</option>
                         <option value="right-column">Sloupec vpravo</option>
                     </select>
                 </div>
                 <!-- NOVÉ POLOŽKY -->
-                <div class="control-row">
-                    <label>Velikost ikon vlastností</label>
-                    <input type="range" id="quartet-stat-size" oninput="updateQuartetConfig('statSize', this.value)" min="0.5" max="2.0" value="1.0" step="0.1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost ikon vlastností</label>
+                        <span class="value-badge" id="val-quartet-stat-size">1.0</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-stat-size" oninput="updateQuartetConfig('statSize', this.value); updateValueBadge(this.id, this.value)" min="0.5" max="2.0" value="1.0" step="0.1" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Velikost písma (Hodnota)</label>
-                    <input type="range" id="quartet-font-size-value" oninput="updateQuartetConfig('fontSizeValue', this.value)" min="0.5" max="3.0" value="1.2" step="0.1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost písma (Hodnota)</label>
+                        <span class="value-badge" id="val-quartet-font-size-value">1.2</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-font-size-value" oninput="updateQuartetConfig('fontSizeValue', this.value); updateValueBadge(this.id, this.value)" min="0.5" max="3.0" value="1.2" step="0.1" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Velikost písma (Popisek)</label>
-                    <input type="range" id="quartet-font-size-label" oninput="updateQuartetConfig('fontSizeLabel', this.value)" min="0.2" max="1.5" value="0.4" step="0.05">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost písma (Popisek)</label>
+                        <span class="value-badge" id="val-quartet-font-size-label">0.4</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-font-size-label" oninput="updateQuartetConfig('fontSizeLabel', this.value); updateValueBadge(this.id, this.value)" min="0.2" max="1.5" value="0.4" step="0.05" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Vystředění v tvaru (Hodnota)</label>
-                    <input type="range" id="quartet-stat-value-offset" oninput="updateQuartetConfig('statValueOffset', this.value)" min="-30" max="30" value="0" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Vystředění v tvaru (Hodnota)</label>
+                        <span class="value-badge" id="val-quartet-stat-value-offset">0</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-stat-value-offset" oninput="updateQuartetConfig('statValueOffset', this.value); updateValueBadge(this.id, this.value)" min="-30" max="30" value="0" step="1" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Vystředění v tvaru (Popisek)</label>
-                    <input type="range" id="quartet-stat-label-offset" oninput="updateQuartetConfig('statLabelOffset', this.value)" min="-30" max="30" value="0" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Vystředění v tvaru (Popisek)</label>
+                        <span class="value-badge" id="val-quartet-stat-label-offset">0</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-stat-label-offset" oninput="updateQuartetConfig('statLabelOffset', this.value); updateValueBadge(this.id, this.value)" min="-30" max="30" value="0" step="1" style="width:100%;">
+                    </div>
                 </div>
                 <div class="control-row">
                     <label>Barva pozadí tvarů</label>
                     <input type="color" id="quartet-stat-bg-color" oninput="updateQuartetConfig('statBgColor', this.value)" value="#000000">
                 </div>
-                <div class="control-row">
-                    <label>Průhlednost pozadí</label>
-                    <input type="range" id="quartet-stat-opacity" oninput="updateQuartetConfig('statOpacity', this.value)" min="1" max="100" value="40" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Průhlednost pozadí</label>
+                        <span class="value-badge" id="val-quartet-stat-opacity">40%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-stat-opacity" oninput="updateQuartetConfig('statOpacity', this.value); updateValueBadge(this.id, this.value)" min="1" max="100" value="40" step="1" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Rozestupy mezi vlastnostmi</label>
-                    <input type="range" id="quartet-stat-spacing" oninput="updateQuartetConfig('statSpacing', this.value)" min="0" max="60" value="5" step="1">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Rozestupy mezi vlastnostmi</label>
+                        <span class="value-badge" id="val-quartet-stat-spacing">5%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="quartet-stat-spacing" oninput="updateQuartetConfig('statSpacing', this.value); updateValueBadge(this.id, this.value)" min="0" max="60" value="5" step="1" style="width:100%;">
+                    </div>
                 </div>
-            
-            <div id="pexeso-global-panel" class="panel-section" style="display:none; background:rgba(16, 185, 129, 0.05); border: 1px solid #10b981; padding: 15px; border-radius: 8px;">
-                <h3 style="color:#10b981;">Nastavení Pexesa</h3>
-                <div class="control-row">
-                    <label>Počet dvojic</label>
-                    <select id="pexeso-pairs-select" class="dropdown" onchange="updatePexesoConfig('pairsCount', this.value); initCardsByMode('pexeso');">
-                        <option value="8">8 dvojic (16 karet)</option>
-                        <option value="16">16 dvojic (32 karet)</option>
-                        <option value="32">32 dvojic (64 karet)</option>
-                    </select>
-                </div>
-                
-                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Vzhled a Typografie</h4>
-                <div class="control-row">
-                    <label>Zobrazit název karty</label>
-                    <input type="checkbox" id="pexeso-show-name" checked onchange="updatePexesoConfig('showName', this.checked)">
-                </div>
-                <div class="control-row">
-                    <label>Zobrazit popisek karty</label>
-                    <input type="checkbox" id="pexeso-show-desc" onchange="updatePexesoConfig('showDesc', this.checked)">
-                </div>
-                <div class="control-row">
-                    <label>Styl písma (Font)</label>
-                    <select id="pexeso-font-family" class="dropdown" onchange="updatePexesoConfig('fontFamily', this.value)">
-                        <option value="'Roboto', sans-serif">Roboto (Moderní)</option>
-                        <option value="'Cinzel', serif">Cinzel (Elegantní)</option>
-                        <option value="'Oswald', sans-serif">Oswald (Úzké)</option>
-                        <option value="'Montserrat', sans-serif">Montserrat (Geometrické)</option>
-                    </select>
-                </div>
-
-                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Umístění textů</h4>
-                <div class="control-row">
-                    <label>Název X (%)</label>
-                    <input type="range" id="pexeso-name-x" oninput="updatePexesoConfig('nameOffsetX', this.value)" min="0" max="100" value="50">
-                </div>
-                <div class="control-row">
-                    <label>Název Y (%)</label>
-                    <input type="range" id="pexeso-name-y" oninput="updatePexesoConfig('nameOffsetY', this.value)" min="0" max="100" value="10">
-                </div>
-                <div class="control-row">
-                    <label>Popisek X (%)</label>
-                    <input type="range" id="pexeso-desc-x" oninput="updatePexesoConfig('descOffsetX', this.value)" min="0" max="100" value="50">
-                </div>
-                <div class="control-row">
-                    <label>Popisek Y (%)</label>
-                    <input type="range" id="pexeso-desc-y" oninput="updatePexesoConfig('descOffsetY', this.value)" min="0" max="100" value="5">
-                </div>
-
-                <button class="action-btn" style="width:100%; margin-top:15px; background:rgba(16, 185, 129, 0.2); border:1px solid #10b981; color:#fff;" onclick="applyGlobalCropToAllCards()">
-                    ✨ Sjednotit ořez v celé sadě
-                </button>
-            </div>
             </div>
 
             <div class="sidebar-section" id="symbols-global-panel">
@@ -304,32 +309,74 @@
                     <div class="control-subgroup">
                         <span class="subgroup-title">Vzhled (Všechny vrstvy)</span>
                         <div class="control-group">
-                            <label>Měřítko (%)</label>
-                            <input type="range" id="global-sym-scale" min="10" max="300" value="100" oninput="updateGlobalSymbolParam('scale', this.value)">
+                            <div class="control-header">
+                                <label>Měřítko (%)</label>
+                                <span class="value-badge" id="val-global-sym-scale">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-scale', -1)">-</button>
+                                <input type="range" id="global-sym-scale" min="10" max="300" value="100" oninput="updateGlobalSymbolParam('scale', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-scale', 1)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Průhlednost (%)</label>
-                            <input type="range" id="global-sym-opacity" min="0" max="100" value="100" oninput="updateGlobalSymbolParam('opacity', this.value)">
+                            <div class="control-header">
+                                <label>Průhlednost (%)</label>
+                                <span class="value-badge" id="val-global-sym-opacity">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-opacity', -1)">-</button>
+                                <input type="range" id="global-sym-opacity" min="0" max="100" value="100" oninput="updateGlobalSymbolParam('opacity', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-opacity', 1)">+</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="control-subgroup">
                         <span class="subgroup-title">Pozice a Rozestupy</span>
                         <div class="control-group">
-                            <label>Posun série X (mm)</label>
-                            <input type="range" id="global-sym-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetX', this.value)">
+                            <div class="control-header">
+                                <label>Posun série X (mm)</label>
+                                <span class="value-badge" id="val-global-sym-offsetX">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-offsetX', -0.5)">-</button>
+                                <input type="range" id="global-sym-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetX', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-offsetX', 0.5)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Posun série Y (mm)</label>
-                            <input type="range" id="global-sym-offsetY" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetY', this.value)">
+                            <div class="control-header">
+                                <label>Posun série Y (mm)</label>
+                                <span class="value-badge" id="val-global-sym-offsetY">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-offsetY', -0.5)">-</button>
+                                <input type="range" id="global-sym-offsetY" min="-50" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('offsetY', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-offsetY', 0.5)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Vertikální rozestup (%)</label>
-                            <input type="range" id="global-sym-spacingY" min="10" max="300" value="100" oninput="updateGlobalSymbolParam('spacingY', this.value)">
+                            <div class="control-header">
+                                <label>Vertikální rozestup (%)</label>
+                                <span class="value-badge" id="val-global-sym-spacingY">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-spacingY', -1)">-</button>
+                                <input type="range" id="global-sym-spacingY" min="50" max="150" value="100" oninput="updateGlobalSymbolParam('spacingY', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-spacingY', 1)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Rozestup sloupců (mm)</label>
-                            <input type="range" id="global-sym-columnX" min="0" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('columnX', this.value)">
+                            <div class="control-header">
+                                <label>Rozestup sloupců (mm)</label>
+                                <span class="value-badge" id="val-global-sym-columnX">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-columnX', -0.5)">-</button>
+                                <input type="range" id="global-sym-columnX" min="0" max="50" value="0" step="0.5" oninput="updateGlobalSymbolParam('columnX', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('global-sym-columnX', 0.5)">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -338,146 +385,493 @@
             <div class="sidebar-section" id="suit-global-panel">
                 <h3 onclick="toggleSection('suit-symbols-section')">Symboly barev (Ikony) <span class="toggle-icon">▼</span></h3>
                 <div id="suit-symbols-section" class="section-content">
-                    <!-- Dynamicky plněno nebo staticky definováno -->
                     <div id="suit-settings-container">
-                        <!-- Srdce -->
-                        <div class="suit-card" style="border-top: 3px solid #ff4444;">
-                            <div class="suit-card-header">
-                                <span class="suit-icon" style="color:#ff4444;">♥</span>
-                                <label class="upload-btn minor" style="flex:1;">
-                                    <input type="file" onchange="handleSuitUpload('Srdce', event)" style="display:none;">
-                                    <span>Vlastní Ikona</span>
-                                </label>
-                            </div>
-                            
+                        <!-- Červené -->
+                        <div id="suit-tab-Červené" class="suit-pane active">
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Vzhled Ikon</span>
-                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Srdce-scale" oninput="updateSuitParam('Srdce', 'scale', this.value)" min="5" max="40" value="18"> </div>
-                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Srdce-opacity" oninput="updateSuitParam('Srdce', 'opacity', this.value)" min="0" max="100" value="100"> </div>
-                            </div>
-
-                            <div class="control-subgroup">
-                                <span class="subgroup-title">Ohraničení a Rám</span>
-                                <div class="control-group"> 
-                                    <label>Barva</label> 
-                                    <input type="color" id="suit-Srdce-borderColor" oninput="updateSuitParam('Srdce', 'borderColor', this.value)" value="#ff4444" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                <span class="subgroup-title">Ilustrace Série</span>
+                                <div class="control-row">
+                                    <label>Vlastní symbol</label>
+                                    <button class="action-btn small" onclick="this.nextElementSibling.click()">📂 Nahrát</button>
+                                    <input type="file" onchange="handleSuitUpload('Červené', event)" style="display:none;">
                                 </div>
-                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Srdce-borderWidth" oninput="updateSuitParam('Srdce', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
-                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Srdce-inset" oninput="updateSuitParam('Srdce', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
-                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Srdce-borderRadius" oninput="updateSuitParam('Srdce', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Měřítko (%)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-scale">18%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-scale', -1)">-</button>
+                                        <input type="range" id="suit-Červené-scale" oninput="updateSuitParam('Červené', 'scale', this.value); updateValueBadge(this.id, this.value)" min="5" max="40" value="18"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-scale', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Průhlednost (%)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-opacity">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-opacity', -1)">-</button>
+                                        <input type="range" id="suit-Červené-opacity" oninput="updateSuitParam('Červené', 'opacity', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-opacity', 1)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Pozice a Rozestupy</span>
-                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Srdce-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Srdce', 'offsetX', this.value)"> </div>
-                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Srdce-offsetY" oninput="updateSuitParam('Srdce', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
-                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Srdce-spacingY" oninput="updateSuitParam('Srdce', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
-                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Srdce-columnX" oninput="updateSuitParam('Srdce', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                                <span class="subgroup-title">Ohraničení Karty</span>
+                                <div class="control-row">
+                                    <label>Barva</label>
+                                    <input type="color" id="suit-Červené-borderColor" oninput="updateSuitParam('Červené', 'borderColor', this.value)" value="#ff0000" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Šířka (px)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-borderWidth">0</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-borderWidth', -1)">-</button>
+                                        <input type="range" id="suit-Červené-borderWidth" oninput="updateSuitParam('Červené', 'borderWidth', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-borderWidth', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Vnitřní odsazení (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-inset">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-inset', -0.5)">-</button>
+                                        <input type="range" id="suit-Červené-inset" oninput="updateSuitParam('Červené', 'inset', this.value); updateValueBadge(this.id, this.value)" min="0" max="10" step="0.5" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-inset', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Zaoblení rohů (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-borderRadius">4mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-borderRadius', -0.5)">-</button>
+                                        <input type="range" id="suit-Červené-borderRadius" oninput="updateSuitParam('Červené', 'borderRadius', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" step="0.5" value="4"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-borderRadius', 0.5)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice série</span>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Posun X (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-offsetX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-offsetX', -0.5)">-</button>
+                                        <input type="range" id="suit-Červené-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Červené', 'offsetX', this.value); updateValueBadge(this.id, this.value)"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-offsetX', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Posun Y (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-offsetY">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-offsetY', -0.5)">-</button>
+                                        <input type="range" id="suit-Červené-offsetY" oninput="updateSuitParam('Červené', 'offsetY', this.value); updateValueBadge(this.id, this.value)" min="-50" max="50" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-offsetY', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Rozestupy série (%)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-spacingY">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-spacingY', -1)">-</button>
+                                        <input type="range" id="suit-Červené-spacingY" oninput="updateSuitParam('Červené', 'spacingY', this.value); updateValueBadge(this.id, this.value)" min="50" max="150" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-spacingY', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Šířka sloupců (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Červené-columnX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-columnX', -0.5)">-</button>
+                                        <input type="range" id="suit-Červené-columnX" oninput="updateSuitParam('Červené', 'columnX', this.value); updateValueBadge(this.id, this.value)" min="-20" max="20" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Červené-columnX', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <!-- Piky -->
-                        <div class="suit-card" style="border-top: 3px solid #4444ff;">
-                            <div class="suit-card-header">
-                                <span class="suit-icon" style="color:#4444ff;">♠</span>
-                                <label class="upload-btn minor" style="flex:1;">
-                                    <input type="file" onchange="handleSuitUpload('Piky', event)" style="display:none;">
-                                    <span>Vlastní Ikona</span>
-                                </label>
-                            </div>
-                            
+                        <!-- Zelené -->
+                        <div id="suit-tab-Zelené" class="suit-pane">
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Vzhled Ikon</span>
-                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Piky-scale" oninput="updateSuitParam('Piky', 'scale', this.value)" min="5" max="40" value="18"> </div>
-                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Piky-opacity" oninput="updateSuitParam('Piky', 'opacity', this.value)" min="0" max="100" value="100"> </div>
-                            </div>
-
-                            <div class="control-subgroup">
-                                <span class="subgroup-title">Ohraničení a Rám</span>
-                                <div class="control-group"> 
-                                    <label>Barva</label> 
-                                    <input type="color" id="suit-Piky-borderColor" oninput="updateSuitParam('Piky', 'borderColor', this.value)" value="#4444ff" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                <span class="subgroup-title">Ilustrace Série</span>
+                                <div class="control-row">
+                                    <label>Vlastní symbol</label>
+                                    <button class="action-btn small" onclick="this.nextElementSibling.click()">📂 Nahrát</button>
+                                    <input type="file" onchange="handleSuitUpload('Zelené', event)" style="display:none;">
                                 </div>
-                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Piky-borderWidth" oninput="updateSuitParam('Piky', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
-                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Piky-inset" oninput="updateSuitParam('Piky', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
-                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Piky-borderRadius" oninput="updateSuitParam('Piky', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Měřítko (%)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-scale">18%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-scale', -1)">-</button>
+                                        <input type="range" id="suit-Zelené-scale" oninput="updateSuitParam('Zelené', 'scale', this.value); updateValueBadge(this.id, this.value)" min="5" max="40" value="18"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-scale', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Průhlednost (%)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-opacity">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-opacity', -1)">-</button>
+                                        <input type="range" id="suit-Zelené-opacity" oninput="updateSuitParam('Zelené', 'opacity', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-opacity', 1)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Pozice a Rozestupy</span>
-                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Piky-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Piky', 'offsetX', this.value)"> </div>
-                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Piky-offsetY" oninput="updateSuitParam('Piky', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
-                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Piky-spacingY" oninput="updateSuitParam('Piky', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
-                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Piky-columnX" oninput="updateSuitParam('Piky', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                                <span class="subgroup-title">Ohraničení Karty</span>
+                                <div class="control-row">
+                                    <label>Barva</label>
+                                    <input type="color" id="suit-Zelené-borderColor" oninput="updateSuitParam('Zelené', 'borderColor', this.value)" value="#22cc22" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Šířka (px)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-borderWidth">0</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-borderWidth', -1)">-</button>
+                                        <input type="range" id="suit-Zelené-borderWidth" oninput="updateSuitParam('Zelené', 'borderWidth', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-borderWidth', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Vnitřní odsazení (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-inset">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-inset', -0.5)">-</button>
+                                        <input type="range" id="suit-Zelené-inset" oninput="updateSuitParam('Zelené', 'inset', this.value); updateValueBadge(this.id, this.value)" min="0" max="10" step="0.5" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-inset', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Zaoblení rohů (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-borderRadius">4mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-borderRadius', -0.5)">-</button>
+                                        <input type="range" id="suit-Zelené-borderRadius" oninput="updateSuitParam('Zelené', 'borderRadius', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" step="0.5" value="4"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-borderRadius', 0.5)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="control-subgroup">
+                                <span class="subgroup-title">Pozice série</span>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Posun X (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-offsetX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-offsetX', -0.5)">-</button>
+                                        <input type="range" id="suit-Zelené-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Zelené', 'offsetX', this.value); updateValueBadge(this.id, this.value)"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-offsetX', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Posun Y (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-offsetY">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-offsetY', -0.5)">-</button>
+                                        <input type="range" id="suit-Zelené-offsetY" oninput="updateSuitParam('Zelené', 'offsetY', this.value); updateValueBadge(this.id, this.value)" min="-50" max="50" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-offsetY', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Rozestupy série (%)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-spacingY">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-spacingY', -1)">-</button>
+                                        <input type="range" id="suit-Zelené-spacingY" oninput="updateSuitParam('Zelené', 'spacingY', this.value); updateValueBadge(this.id, this.value)" min="50" max="150" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-spacingY', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Šířka sloupců (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Zelené-columnX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-columnX', -0.5)">-</button>
+                                        <input type="range" id="suit-Zelené-columnX" oninput="updateSuitParam('Zelené', 'columnX', this.value); updateValueBadge(this.id, this.value)" min="-20" max="20" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Zelené-columnX', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <!-- Kule -->
-                        <div class="suit-card" style="border-top: 3px solid #ffaa00;">
-                            <div class="suit-card-header">
-                                <span class="suit-icon" style="color:#ffaa00;">♦</span>
-                                <label class="upload-btn minor" style="flex:1;">
-                                    <input type="file" onchange="handleSuitUpload('Kule', event)" style="display:none;">
-                                    <span>Vlastní Ikona</span>
-                                </label>
-                            </div>
-                            
+                        <div id="suit-tab-Kule" class="suit-pane">
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Vzhled Ikon</span>
-                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Kule-scale" oninput="updateSuitParam('Kule', 'scale', this.value)" min="5" max="40" value="18"> </div>
-                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Kule-opacity" oninput="updateSuitParam('Kule', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                                <span class="subgroup-title">Ilustrace Série</span>
+                                <div class="control-row">
+                                    <label>Vlastní symbol</label>
+                                    <button class="action-btn small" onclick="this.nextElementSibling.click()">📂 Nahrát</button>
+                                    <input type="file" onchange="handleSuitUpload('Kule', event)" style="display:none;">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Měřítko (%)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-scale">18%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-scale', -1)">-</button>
+                                        <input type="range" id="suit-Kule-scale" oninput="updateSuitParam('Kule', 'scale', this.value); updateValueBadge(this.id, this.value)" min="5" max="40" value="18"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-scale', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Průhlednost (%)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-opacity">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-opacity', -1)">-</button>
+                                        <input type="range" id="suit-Kule-opacity" oninput="updateSuitParam('Kule', 'opacity', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-opacity', 1)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Ohraničení a Rám</span>
-                                <div class="control-group"> 
-                                    <label>Barva</label> 
-                                    <input type="color" id="suit-Kule-borderColor" oninput="updateSuitParam('Kule', 'borderColor', this.value)" value="#ffaa00" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                <span class="subgroup-title">Ohraničení Karty</span>
+                                <div class="control-row">
+                                    <label>Barva</label>
+                                    <input type="color" id="suit-Kule-borderColor" oninput="updateSuitParam('Kule', 'borderColor', this.value)" value="#8b4513" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
                                 </div>
-                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Kule-borderWidth" oninput="updateSuitParam('Kule', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
-                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Kule-inset" oninput="updateSuitParam('Kule', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
-                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Kule-borderRadius" oninput="updateSuitParam('Kule', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Šířka (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-borderWidth">0</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-borderWidth', -1)">-</button>
+                                        <input type="range" id="suit-Kule-borderWidth" oninput="updateSuitParam('Kule', 'borderWidth', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-borderWidth', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Vnitřní odsazení (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-inset">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-inset', -0.5)">-</button>
+                                        <input type="range" id="suit-Kule-inset" oninput="updateSuitParam('Kule', 'inset', this.value); updateValueBadge(this.id, this.value)" min="0" max="10" step="0.5" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-inset', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Zaoblení rohů (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-borderRadius">4mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-borderRadius', -0.5)">-</button>
+                                        <input type="range" id="suit-Kule-borderRadius" oninput="updateSuitParam('Kule', 'borderRadius', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" step="0.5" value="4"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-borderRadius', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
                                 <span class="subgroup-title">Pozice a Rozestupy</span>
-                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Kule-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Kule', 'offsetX', this.value)"> </div>
-                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Kule-offsetY" oninput="updateSuitParam('Kule', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
-                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Kule-spacingY" oninput="updateSuitParam('Kule', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
-                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Kule-columnX" oninput="updateSuitParam('Kule', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Posun X (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-offsetX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-offsetX', -0.5)">-</button>
+                                        <input type="range" id="suit-Kule-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Kule', 'offsetX', this.value); updateValueBadge(this.id, this.value)"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-offsetX', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Posun Y (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-offsetY">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-offsetY', -0.5)">-</button>
+                                        <input type="range" id="suit-Kule-offsetY" oninput="updateSuitParam('Kule', 'offsetY', this.value); updateValueBadge(this.id, this.value)" min="-50" max="50" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-offsetY', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Rozestupy série (%)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-spacingY">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-spacingY', -1)">-</button>
+                                        <input type="range" id="suit-Kule-spacingY" oninput="updateSuitParam('Kule', 'spacingY', this.value); updateValueBadge(this.id, this.value)" min="50" max="150" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-spacingY', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Šířka sloupců (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Kule-columnX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-columnX', -0.5)">-</button>
+                                        <input type="range" id="suit-Kule-columnX" oninput="updateSuitParam('Kule', 'columnX', this.value); updateValueBadge(this.id, this.value)" min="-20" max="20" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Kule-columnX', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <!-- Žaludy -->
-                        <div class="suit-card" style="border-top: 3px solid #22cc22;">
-                            <div class="suit-card-header">
-                                <span class="suit-icon" style="color:#22cc22;">♣</span>
-                                <label class="upload-btn minor" style="flex:1;">
-                                    <input type="file" onchange="handleSuitUpload('Žaludy', event)" style="display:none;">
-                                    <span>Vlastní Ikona</span>
-                                </label>
-                            </div>
-                            
+                        <div id="suit-tab-Žaludy" class="suit-pane">
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Vzhled Ikon</span>
-                                <div class="control-group"> <label>Velikost (%)</label> <input type="range" id="suit-Žaludy-scale" oninput="updateSuitParam('Žaludy', 'scale', this.value)" min="5" max="40" value="18"> </div>
-                                <div class="control-group"> <label>Průhlednost (%)</label> <input type="range" id="suit-Žaludy-opacity" oninput="updateSuitParam('Žaludy', 'opacity', this.value)" min="0" max="100" value="100"> </div>
+                                <span class="subgroup-title">Ilustrace Série</span>
+                                <div class="control-row">
+                                    <label>Vlastní symbol</label>
+                                    <button class="action-btn small" onclick="this.nextElementSibling.click()">📂 Nahrát</button>
+                                    <input type="file" onchange="handleSuitUpload('Žaludy', event)" style="display:none;">
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Měřítko (%)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-scale">18%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-scale', -1)">-</button>
+                                        <input type="range" id="suit-Žaludy-scale" oninput="updateSuitParam('Žaludy', 'scale', this.value); updateValueBadge(this.id, this.value)" min="5" max="40" value="18"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-scale', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <div class="control-header">
+                                        <label>Průhlednost (%)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-opacity">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-opacity', -1)">-</button>
+                                        <input type="range" id="suit-Žaludy-opacity" oninput="updateSuitParam('Žaludy', 'opacity', this.value); updateValueBadge(this.id, this.value)" min="0" max="100" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-opacity', 1)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
-                                <span class="subgroup-title">Ohraničení a Rám</span>
-                                <div class="control-group"> 
-                                    <label>Barva</label> 
-                                    <input type="color" id="suit-Žaludy-borderColor" oninput="updateSuitParam('Žaludy', 'borderColor', this.value)" value="#22cc22" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
+                                <span class="subgroup-title">Ohraničení Karty</span>
+                                <div class="control-row">
+                                    <label>Barva</label>
+                                    <input type="color" id="suit-Žaludy-borderColor" oninput="updateSuitParam('Žaludy', 'borderColor', this.value)" value="#ffbb00" style="width:100%; height:24px; border:none; background:none; cursor:pointer;"> 
                                 </div>
-                                <div class="control-group"> <label>Šířka (mm)</label> <input type="range" id="suit-Žaludy-borderWidth" oninput="updateSuitParam('Žaludy', 'borderWidth', this.value)" min="0" max="15" value="0"> </div>
-                                <div class="control-group"> <label>Vnitřní odsazení (mm)</label> <input type="range" id="suit-Žaludy-inset" oninput="updateSuitParam('Žaludy', 'inset', this.value)" min="0" max="10" step="0.5" value="0"> </div>
-                                <div class="control-group"> <label>Zaoblení rohů (mm)</label> <input type="range" id="suit-Žaludy-borderRadius" oninput="updateSuitParam('Žaludy', 'borderRadius', this.value)" min="0" max="15" step="0.5" value="4"> </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Šířka (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-borderWidth">0</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-borderWidth', -1)">-</button>
+                                        <input type="range" id="suit-Žaludy-borderWidth" oninput="updateSuitParam('Žaludy', 'borderWidth', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-borderWidth', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Vnitřní odsazení (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-inset">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-inset', -0.5)">-</button>
+                                        <input type="range" id="suit-Žaludy-inset" oninput="updateSuitParam('Žaludy', 'inset', this.value); updateValueBadge(this.id, this.value)" min="0" max="10" step="0.5" value="0"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-inset', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Zaoblení rohů (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-borderRadius">4mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-borderRadius', -0.5)">-</button>
+                                        <input type="range" id="suit-Žaludy-borderRadius" oninput="updateSuitParam('Žaludy', 'borderRadius', this.value); updateValueBadge(this.id, this.value)" min="0" max="15" step="0.5" value="4"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-borderRadius', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="control-subgroup">
                                 <span class="subgroup-title">Pozice a Rozestupy</span>
-                                <div class="control-group"> <label>Posun X (mm)</label> <input type="range" id="suit-Žaludy-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Žaludy', 'offsetX', this.value)"> </div>
-                                <div class="control-group"> <label>Posun Y (mm)</label> <input type="range" id="suit-Žaludy-offsetY" oninput="updateSuitParam('Žaludy', 'offsetY', this.value)" min="-50" max="50" value="0" step="0.5"> </div>
-                                <div class="control-group"> <label>Rozestupy série (%)</label> <input type="range" id="suit-Žaludy-spacingY" oninput="updateSuitParam('Žaludy', 'spacingY', this.value)" min="50" max="150" value="100"> </div>
-                                <div class="control-group"> <label>Šířka sloupců (mm)</label> <input type="range" id="suit-Žaludy-columnX" oninput="updateSuitParam('Žaludy', 'columnX', this.value)" min="-20" max="20" value="0" step="0.5"> </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Posun X (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-offsetX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-offsetX', -0.5)">-</button>
+                                        <input type="range" id="suit-Žaludy-offsetX" min="-50" max="50" value="0" step="0.5" oninput="updateSuitParam('Žaludy', 'offsetX', this.value); updateValueBadge(this.id, this.value)"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-offsetX', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Posun Y (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-offsetY">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-offsetY', -0.5)">-</button>
+                                        <input type="range" id="suit-Žaludy-offsetY" oninput="updateSuitParam('Žaludy', 'offsetY', this.value); updateValueBadge(this.id, this.value)" min="-50" max="50" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-offsetY', 0.5)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Rozestupy série (%)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-spacingY">100%</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-spacingY', -1)">-</button>
+                                        <input type="range" id="suit-Žaludy-spacingY" oninput="updateSuitParam('Žaludy', 'spacingY', this.value); updateValueBadge(this.id, this.value)" min="50" max="150" value="100"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-spacingY', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="control-group"> 
+                                    <div class="control-header">
+                                        <label>Šířka sloupců (mm)</label> 
+                                        <span class="value-badge" id="val-suit-Žaludy-columnX">0mm</span>
+                                    </div>
+                                    <div class="slider-stepper">
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-columnX', -0.5)">-</button>
+                                        <input type="range" id="suit-Žaludy-columnX" oninput="updateSuitParam('Žaludy', 'columnX', this.value); updateValueBadge(this.id, this.value)" min="-20" max="20" value="0" step="0.5"> 
+                                        <button class="step-btn" onclick="adjustSlider('suit-Žaludy-columnX', 0.5)">+</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -560,20 +954,48 @@
                 <div class="control-subgroup">
                     <span class="subgroup-title">Pozice a Rozestupy</span>
                     <div class="control-group">
-                        <label>Posun X (mm)</label>
-                        <input type="range" id="layout-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetX', this.value)">
+                        <div class="control-header">
+                            <label>Posun X (mm)</label>
+                            <span class="value-badge" id="val-layout-offset-x">0mm</span>
+                        </div>
+                        <div class="slider-stepper">
+                            <button class="step-btn" onclick="adjustSlider('layout-offset-x', -0.5)">-</button>
+                            <input type="range" id="layout-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetX', this.value); updateValueBadge(this.id, this.value)">
+                            <button class="step-btn" onclick="adjustSlider('layout-offset-x', 0.5)">+</button>
+                        </div>
                     </div>
                     <div class="control-group">
-                        <label>Posun Y (mm)</label>
-                        <input type="range" id="layout-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetY', this.value)">
+                        <div class="control-header">
+                            <label>Posun Y (mm)</label>
+                            <span class="value-badge" id="val-layout-offset-y">0mm</span>
+                        </div>
+                        <div class="slider-stepper">
+                            <button class="step-btn" onclick="adjustSlider('layout-offset-y', -0.5)">-</button>
+                            <input type="range" id="layout-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('offsetY', this.value); updateValueBadge(this.id, this.value)">
+                            <button class="step-btn" onclick="adjustSlider('layout-offset-y', 0.5)">+</button>
+                        </div>
                     </div>
                     <div class="control-group">
-                        <label>Rozestupy Y (%)</label>
-                        <input type="range" id="layout-spacing-y" min="50" max="150" value="100" oninput="updateLayoutParam('spacingY', this.value)">
+                        <div class="control-header">
+                            <label>Rozestupy Y (%)</label>
+                            <span class="value-badge" id="val-layout-spacing-y">100%</span>
+                        </div>
+                        <div class="slider-stepper">
+                            <button class="step-btn" onclick="adjustSlider('layout-spacing-y', -1)">-</button>
+                            <input type="range" id="layout-spacing-y" min="50" max="150" value="100" oninput="updateLayoutParam('spacingY', this.value); updateValueBadge(this.id, this.value)">
+                            <button class="step-btn" onclick="adjustSlider('layout-spacing-y', 1)">+</button>
+                        </div>
                     </div>
                     <div class="control-group">
-                        <label>Sloupce X (mm)</label>
-                        <input type="range" id="layout-column-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('columnX', this.value)">
+                        <div class="control-header">
+                            <label>Sloupce X (mm)</label>
+                            <span class="value-badge" id="val-layout-column-x">0mm</span>
+                        </div>
+                        <div class="slider-stepper">
+                            <button class="step-btn" onclick="adjustSlider('layout-column-x', -0.5)">-</button>
+                            <input type="range" id="layout-column-x" min="-50" max="50" value="0" step="0.5" oninput="updateLayoutParam('columnX', this.value); updateValueBadge(this.id, this.value)">
+                            <button class="step-btn" onclick="adjustSlider('layout-column-x', 0.5)">+</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -584,6 +1006,11 @@
                     <label style="color:var(--accent); font-weight:bold;">ZÁMEK KARTY 🔒</label>
                     <input type="checkbox" id="card-lock-toggle" onchange="toggleCardLock(this.checked)">
                 </div>
+                <div class="control-row">
+                    <label>Vlastní rozvržení</label>
+                    <input type="checkbox" id="individual-override-toggle" onchange="toggleIndividualOverride(this.checked)">
+                </div>
+                
                 <div id="individual-quartet-controls" style="display:none; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1); margin-top:10px;">
                     <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px;">KVARTETA DATA</h4>
                     <div class="control-group">
@@ -592,6 +1019,7 @@
                     </div>
                     <div class="control-group">
                         <label>Popis</label>
+                        <!-- Červené -->
                          <textarea id="ind-q-desc" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px; font-size:12px;" rows="2" oninput="updateActiveQuartetData('description', this.value)"></textarea>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
@@ -606,32 +1034,74 @@
                     <div class="control-subgroup" id="individual-symbols-subgroup">
                         <span class="subgroup-title">Symboly (Vlastní)</span>
                         <div class="control-group">
-                            <label>Měřítko (%)</label>
-                            <input type="range" id="ind-scale" min="10" max="300" value="100" oninput="updateIndividualParam('scale', this.value)">
+                            <div class="control-header">
+                                <label>Měřítko (%)</label>
+                                <span class="value-badge" id="val-ind-scale">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-scale', -1)">-</button>
+                                <input type="range" id="ind-scale" min="10" max="300" value="100" oninput="updateIndividualParam('scale', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-scale', 1)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Průhlednost (%)</label>
-                            <input type="range" id="ind-opacity" min="0" max="100" value="100" oninput="updateIndividualParam('opacity', this.value)">
+                            <div class="control-header">
+                                <label>Průhlednost (%)</label>
+                                <span class="value-badge" id="val-ind-opacity">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-opacity', -1)">-</button>
+                                <input type="range" id="ind-opacity" min="0" max="100" value="100" oninput="updateIndividualParam('opacity', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-opacity', 1)">+</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="control-subgroup" id="ind-position-subgroup">
                         <span class="subgroup-title">Pozice a Rozestupy</span>
                         <div class="control-group">
-                            <label>Posun X (mm)</label>
-                            <input type="range" id="ind-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetX', this.value)">
+                            <div class="control-header">
+                                <label>Posun X (mm)</label>
+                                <span class="value-badge" id="val-ind-offset-x">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-offset-x', -0.5)">-</button>
+                                <input type="range" id="ind-offset-x" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetX', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-offset-x', 0.5)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Posun Y (mm)</label>
-                            <input type="range" id="ind-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetY', this.value)">
+                            <div class="control-header">
+                                <label>Posun Y (mm)</label>
+                                <span class="value-badge" id="val-ind-offset-y">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-offset-y', -0.5)">-</button>
+                                <input type="range" id="ind-offset-y" min="-50" max="50" value="0" step="0.5" oninput="updateIndividualParam('offsetY', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-offset-y', 0.5)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Rozestupy (%)</label>
-                            <input type="range" id="ind-spacing-y" min="50" max="150" value="100" oninput="updateIndividualParam('spacingY', this.value)">
+                            <div class="control-header">
+                                <label>Rozestupy (%)</label>
+                                <span class="value-badge" id="val-ind-spacing-y">100%</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-spacing-y', -1)">-</button>
+                                <input type="range" id="ind-spacing-y" min="50" max="150" value="100" oninput="updateIndividualParam('spacingY', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-spacing-y', 1)">+</button>
+                            </div>
                         </div>
                         <div class="control-group">
-                            <label>Sloupce X (mm)</label>
-                            <input type="range" id="ind-column-x" min="-30" max="30" value="0" step="0.5" oninput="updateIndividualParam('columnX', this.value)">
+                            <div class="control-header">
+                                <label>Sloupce X (mm)</label>
+                                <span class="value-badge" id="val-ind-column-x">0mm</span>
+                            </div>
+                            <div class="slider-stepper">
+                                <button class="step-btn" onclick="adjustSlider('ind-column-x', -0.5)">-</button>
+                                <input type="range" id="ind-column-x" min="-30" max="30" value="0" step="0.5" oninput="updateIndividualParam('columnX', this.value); updateValueBadge(this.id, this.value)">
+                                <button class="step-btn" onclick="adjustSlider('ind-column-x', 0.5)">+</button>
+                            </div>
                         </div>
                     </div>
 
@@ -672,26 +1142,46 @@
                     <label>Barva ohraničení</label>
                     <input type="color" id="overlay-border-color" value="#000000" style="width:100%; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateGlobalOverlayParam('borderColor', this.value)">
                 </div>
-                <div class="control-row">
-                    <label>Šířka ohraničení (px)</label>
-                    <input type="range" id="overlay-border-width" min="0" max="20" value="0" oninput="updateGlobalOverlayParam('borderWidth', this.value)">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Šířka ohraničení (px)</label>
+                        <span class="value-badge" id="val-overlay-border-width">0px</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="overlay-border-width" min="0" max="20" value="0" oninput="updateGlobalOverlayParam('borderWidth', this.value); updateValueBadge(this.id, this.value)" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Vnitřní odsazení (mm)</label>
-                    <input type="range" id="overlay-inset" min="0" max="10" step="0.5" value="0" oninput="updateGlobalOverlayParam('inset', this.value)">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Vnitřní odsazení (mm)</label>
+                        <span class="value-badge" id="val-overlay-inset">0mm</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="overlay-inset" min="0" max="10" step="0.5" value="0" oninput="updateGlobalOverlayParam('inset', this.value); updateValueBadge(this.id, this.value)" style="width:100%;">
+                    </div>
                 </div>
-                <div class="control-row">
-                    <label>Zaoblení rohů (mm)</label>
-                    <input type="range" id="overlay-border-radius" min="0" max="20" step="0.5" value="4" oninput="updateGlobalOverlayParam('borderRadius', this.value)">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Zaoblení rohů (mm)</label>
+                        <span class="value-badge" id="val-overlay-border-radius">4mm</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="overlay-border-radius" min="0" max="20" step="0.5" value="4" oninput="updateGlobalOverlayParam('borderRadius', this.value); updateValueBadge(this.id, this.value)" style="width:100%;">
+                    </div>
                 </div>
                 
                 <label class="upload-btn minor">
                     <input type="file" id="upload-overlay" accept="image/*" style="display:none;" onchange="handleOverlayUpload(event)">
                     <span>+ Společný rám / Logo</span>
                 </label>
-                <div class="control-row">
-                    <label>Průhlednost (%)</label>
-                    <input type="range" id="overlay-opacity" min="0" max="100" value="80" oninput="updateOverlay()">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Průhlednost (%)</label>
+                        <span class="value-badge" id="val-overlay-opacity">80%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="overlay-opacity" min="0" max="100" value="80" oninput="updateOverlay(); updateValueBadge(this.id, this.value)" style="width:100%;">
+                    </div>
                 </div>
                 <div class="control-row">
                     <label>Posun X / Y (px)</label>
@@ -716,9 +1206,14 @@
                     <input type="file" id="upload-logo" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
                     <span>+ Nahrát Logo / Erb</span>
                 </label>
-                <div class="control-row">
-                    <label>Průhlednost (%)</label>
-                    <input type="range" id="logo-opacity" min="0" max="100" value="100" oninput="updateLogo()">
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Průhlednost (%)</label>
+                        <span class="value-badge" id="val-logo-opacity">100%</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <input type="range" id="logo-opacity" min="0" max="100" value="100" oninput="updateLogo(); updateValueBadge(this.id, this.value)" style="width:100%;">
+                    </div>
                 </div>
                 <div class="control-row">
                     <label>Posun X / Y (px)</label>
@@ -735,99 +1230,26 @@
                 </div>
                 <p class="hint-text">Tip: Alt + Tah myší hýbe logem přímo na kartě.</p>
             </div>
-            </div> <!-- End of front-side-panels -->
-
-            <!-- ZADNÍ STRANA PANELY -->
-            <div id="back-side-panels" style="display:none;">
-                <div class="panel-section">
-                    <h3>Obrázek zadní strany (Rub)</h3>
-                    <label class="upload-btn primary" style="width:100%; text-align:center;">
-                        <input type="file" accept="image/*" style="display:none;" onchange="handleBackImageUpload(event)">
-                        <span>+ Nahrát Rub Karty</span>
-                    </label>
-                    <div class="control-row" style="margin-top:10px;">
-                        <label>Měřítko (%)</label>
-                        <input type="range" id="back-img-scale" min="10" max="400" value="100" oninput="updateBackImageParam('scale', this.value)">
-                    </div>
-                    <div class="control-row">
-                        <label>Posun X</label>
-                        <input type="range" id="back-img-x" min="-200" max="200" value="0" oninput="updateBackImageParam('x', this.value)">
-                    </div>
-                    <div class="control-row">
-                        <label>Posun Y</label>
-                        <input type="range" id="back-img-y" min="-200" max="200" value="0" oninput="updateBackImageParam('y', this.value)">
-                    </div>
-                    
-                    <button onclick="resetBackImage()" class="action-btn minor full-width" style="margin-top:10px; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat Obrázek</button>
-                    <p class="hint-text" style="color:var(--accent);">Rozměry se automaticky přebírají z přední strany.</p>
-                </div>
-
-                <div class="panel-section">
-                    <h3>Overlay zadní strany (Vrstva 2)</h3>
-                    <div class="control-row">
-                        <label>Barva ohraničení</label>
-                        <input type="color" id="back-overlay-border-color" value="#555555" style="width:100%; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateBackOverlayParam('borderColor', this.value)">
-                    </div>
-                    <div class="control-row">
-                        <label>Šířka ohraničení (px)</label>
-                        <input type="range" id="back-overlay-border-width" min="0" max="20" value="0" oninput="updateBackOverlayParam('borderWidth', this.value)">
-                    </div>
-                    <div class="control-row">
-                        <label>Vnitřní odsazení (mm)</label>
-                        <input type="range" id="back-overlay-inset" min="0" max="10" step="0.5" value="0" oninput="updateBackOverlayParam('inset', this.value)">
-                    </div>
-                    <div class="control-row">
-                        <label>Zaoblení rohů (mm)</label>
-                        <input type="range" id="back-overlay-border-radius" min="0" max="20" step="0.5" value="4" oninput="updateBackOverlayParam('borderRadius', this.value)">
-                    </div>
-                    
-                    <label class="upload-btn minor">
-                        <input type="file" id="upload-back-overlay" accept="image/*" style="display:none;" onchange="handleBackOverlayUpload(event)">
-                        <span>+ Společný rám / Vzor</span>
-                    </label>
-                    <div class="control-row">
-                        <label>Průhlednost (%)</label>
-                        <input type="range" id="back-overlay-opacity" min="0" max="100" value="80" oninput="updateBackOverlay()">
-                    </div>
-                    <div class="control-row">
-                        <label>Posun X / Y (px)</label>
-                        <div style="display: flex; gap: 4px;">
-                            <input type="number" id="back-overlay-x" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateBackOverlay()">
-                            <input type="number" id="back-overlay-y" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateBackOverlay()">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3>Logo zadní strany (Vrstva 2)</h3>
-                    <label class="upload-btn minor">
-                        <input type="file" id="upload-back-logo" accept="image/*" style="display:none;" onchange="handleBackLogoUpload(event)">
-                        <span>+ Nahrát Logo pro rub</span>
-                    </label>
-                    <div class="control-row">
-                        <label>Průhlednost (%)</label>
-                        <input type="range" id="back-logo-opacity" min="0" max="100" value="100" oninput="updateBackLogo()">
-                    </div>
-                    <div class="control-row">
-                        <label>Posun X / Y (px)</label>
-                        <div style="display: flex; gap: 4px;">
-                            <input type="number" id="back-logo-x" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateBackLogo()">
-                            <input type="number" id="back-logo-y" value="0" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateBackLogo()">
-                        </div>
-                    </div>
-                    <div class="control-row">
-                        <label>Zoom (%)</label>
-                        <div class="stepper">
-                            <input type="number" id="back-logo-zoom" value="30" style="width: 45px; background: var(--bg-app); border: 1px solid var(--border); color: #fff; text-align: center;" onchange="updateBackLogo()">
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div class="panel-actions-bottom">
-                <button class="action-btn primary full-width" onclick="exportPrintSheets()">🖨️ Export k Tisku</button>
+                <button class="action-btn primary full-width" onclick="exportPrintSheets()">🖨️ Export k tisku</button>
+                <button class="action-btn secondary full-width" onclick="downloadAllAsZip()">📦 Stáhnout vše (ZIP)</button>
             </div>
-            <p class="hint-text" style="margin-top: 10px; text-align: center;">Obrázky přidávejte Drag&Drop přímo na karty.</p>
+        </div>
+    </div>
+
+    <!-- Progress Overlay pro hromadný export -->
+    <div id="progress-overlay" class="progress-overlay" style="display: none;">
+        <div class="progress-card">
+            <h3>Příprava exportu...</h3>
+            <div class="progress-bar-container">
+                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
+            <div id="progress-status" class="progress-status">Zpracovávám kartu 0 / 32</div>
+        </div>
+    </div>
+
+    <p class="hint-text" style="margin-top: 10px; text-align: center;">Obrázky přidávejte Drag&Drop přímo na karty.</p>
         </aside>
 
         <!-- Pracovní plocha (Mřížka karet) -->

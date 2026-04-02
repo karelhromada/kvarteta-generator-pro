@@ -87,46 +87,6 @@ let AppState = {
         columnX: 0
     },
 
-    // --- REŽIM PEXESO (v1.0) ---
-    pexesoSettings: {
-        pairsCount: 16,
-        showName: true,
-        showDesc: false,
-        nameOffsetX: 50, nameOffsetY: 10,
-        descOffsetX: 50, descOffsetY: 5,
-        fontFamily: "'Roboto', sans-serif"
-    },
-
-    // --- NASTAVENÍ ZADNÍ STRANY ---
-    backSideSettings: {
-        image: null,
-        crop: { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 },
-        overlay: {
-            image: null,
-            opacity: 0.8,
-            scale: 1,
-            x: 0,
-            y: 0,
-            stretchX: 1,
-            stretchY: 1,
-            borderColor: '#555555',
-            borderWidth: 0,
-            inset: 0,
-            borderRadius: 4
-        },
-        logo: {
-            image: null,
-            opacity: 1,
-            scale: 0.3,
-            x: 0,
-            y: 0,
-            stretchX: 1,
-            stretchY: 1
-        }
-    },
-
-    viewMode: 'front', // 'front' (lice) | 'back' (ruby)
-    
     // --- REŽIM KVARTETA (v1.5) ---
     quartetSettings: {
         attributeNames: ["Výška", "Váha", "Věk", "Síla"], // Výchozí názvy
@@ -153,10 +113,10 @@ let AppState = {
 
     // Nastavení symbolů pro každou barvu (značku)
     suitSettings: {
-        'Srdce':  { image: null, opacity: 1, scale: 0.18, color: '#ff4444', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ff4444', borderWidth: 0, inset: 0, borderRadius: 4 },
-        'Piky':   { image: null, opacity: 1, scale: 0.18, color: '#4444ff', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#4444ff', borderWidth: 0, inset: 0, borderRadius: 4 },
-        'Kule':   { image: null, opacity: 1, scale: 0.18, color: '#ffbb00', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ffbb00', borderWidth: 0, inset: 0, borderRadius: 4 },
-        'Žaludy': { image: null, opacity: 1, scale: 0.18, color: '#44ff44', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#44ff44', borderWidth: 0, inset: 0, borderRadius: 4 }
+        'Červené': { image: null, opacity: 1, scale: 0.18, color: '#ff0000', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ff0000', borderWidth: 0, inset: 0, borderRadius: 4 },
+        'Zelené':  { image: null, opacity: 1, scale: 0.18, color: '#22cc22', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#22cc22', borderWidth: 0, inset: 0, borderRadius: 4 },
+        'Kule':    { image: null, opacity: 1, scale: 0.18, color: '#8b4513', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#8b4513', borderWidth: 0, inset: 0, borderRadius: 4 },
+        'Žaludy':  { image: null, opacity: 1, scale: 0.18, color: '#ffbb00', offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ffbb00', borderWidth: 0, inset: 0, borderRadius: 4 }
     },
 
     // Globální nastavení rozvržení dle hodnoty (7-Eso)
@@ -184,23 +144,12 @@ let AppState = {
 
 // --- INICIALIZACE SADY ---
 
-function initCardsByMode(mode, forceReset = false) {
-    // Pokud už karty máme a nemáme vynucený reset, jen aktualizujeme UI a končíme
-    if (!forceReset && AppState.cards && AppState.cards.length > 0 && AppState.gameMode === mode) {
-        syncUIPanels(mode);
-        renderUIFromState();
-        return;
-    }
-
+function initCardsByMode(mode) {
     AppState.gameMode = mode;
     AppState.cards = [];
     
     if (mode === 'playing_cards') {
-        // Hrací karty a kvarteta mají defaultně 63x105 mm
-        AppState.cardWidth = 63;
-        AppState.cardHeight = 105;
-        
-        const suits = ['Srdce', 'Piky', 'Kule', 'Žaludy'];
+        const suits = ['Červené', 'Zelené', 'Kule', 'Žaludy'];
         const values = ['7', '8', '9', '10', 'Spodek', 'Svršek', 'Král', 'Eso'];
         suits.forEach(suit => {
             values.forEach(val => {
@@ -208,46 +157,19 @@ function initCardsByMode(mode, forceReset = false) {
             });
         });
     } else if (mode === 'quartet') {
-        // Hrací karty a kvarteta mají defaultně 63x105 mm
-        AppState.cardWidth = 63;
-        AppState.cardHeight = 105;
-
         for (let i = 1; i <= 8; i++) {
             ['A', 'B', 'C', 'D'].forEach(letter => {
                 AppState.cards.push(createEmptyCard(`q_${i}${letter}`, `${i}${letter}`));
             });
         }
     } else if (mode === 'pexeso') {
-        if (!AppState.pexesoSettings) {
-             AppState.pexesoSettings = {
-                pairsCount: 16,
-                showName: true,
-                showDesc: false,
-                nameOffsetX: 50, nameOffsetY: 10,
-                descOffsetX: 50, descOffsetY: 5,
-                fontFamily: "'Roboto', sans-serif"
-            };
-        }
-        const pairs = AppState.pexesoSettings.pairsCount || 16;
-        
-        // Pexeso zůstává čtvercové
-        AppState.cardWidth = 60;
-        AppState.cardHeight = 60;
-        AppState.cardRadius = 4;
-
-        for (let i = 1; i <= pairs; i++) {
-            AppState.cards.push(createEmptyCard(`pex_${i}A`, `${i}A`));
-            AppState.cards.push(createEmptyCard(`pex_${i}B`, `${i}B`));
+        const count = AppState.pexesoCount || 16;
+        for (let i = 1; i <= count; i++) {
+            AppState.cards.push(createEmptyCard(`pex_${i}`, `Pexeso ${i}`));
         }
     }
     
-    syncUIPanels(mode);
-
-    saveState();
-    renderUIFromState();
-}
-
-function syncUIPanels(mode) {
+    // UI Přepínač
     const qGlobalPanel = document.getElementById('quartet-global-panel');
     const symGlobalPanel = document.getElementById('symbols-global-panel');
     const layoutGlobalPanel = document.getElementById('layout-global-panel');
@@ -256,13 +178,11 @@ function syncUIPanels(mode) {
     const indQuartetControls = document.getElementById('individual-quartet-controls');
     const indLayoutControls = document.getElementById('individual-symbols-subgroup');
     const indPositionControls = document.getElementById('ind-position-subgroup');
-    const pexGlobalPanel = document.getElementById('pexeso-global-panel');
     const showSymbolsRow = document.getElementById('show-symbols-row');
     
     if (qGlobalPanel) {
         if (mode === 'quartet') {
             qGlobalPanel.style.display = 'block';
-            if (pexGlobalPanel) pexGlobalPanel.style.display = 'none';
             if (symGlobalPanel) symGlobalPanel.style.display = 'none';
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
@@ -271,20 +191,8 @@ function syncUIPanels(mode) {
             if (indLayoutControls) indLayoutControls.style.display = 'none';
             if (indPositionControls) indPositionControls.style.display = 'none';
             if (showSymbolsRow) showSymbolsRow.style.display = 'none';
-        } else if (mode === 'pexeso') {
-            qGlobalPanel.style.display = 'none';
-            if (pexGlobalPanel) pexGlobalPanel.style.display = 'block';
-            if (symGlobalPanel) symGlobalPanel.style.display = 'none';
-            if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
-            if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
-            if (importBtn) importBtn.style.display = 'none';
-            if (indQuartetControls) indQuartetControls.style.display = 'none';
-            if (indLayoutControls) indLayoutControls.style.display = 'none';
-            if (indPositionControls) indPositionControls.style.display = 'none';
-            if (showSymbolsRow) showSymbolsRow.style.display = 'none';
         } else {
             qGlobalPanel.style.display = 'none';
-            if (pexGlobalPanel) pexGlobalPanel.style.display = 'none';
             if (symGlobalPanel) symGlobalPanel.style.display = 'block';
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'flex';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'block';
@@ -295,6 +203,9 @@ function syncUIPanels(mode) {
             if (showSymbolsRow) showSymbolsRow.style.display = 'flex';
         }
     }
+
+    saveState();
+    renderUIFromState();
 }
 
 function createEmptyCard(id, label) {
@@ -338,8 +249,21 @@ function saveState() {
 
 function autosaveToLocalStorage() {
     try {
-        const data = JSON.stringify({ ...AppState, history: [], historyIndex: -1 });
-        localStorage.setItem('cardgen_autosave', data);
+        const normalizeKeys = (obj) => {
+            if (!obj || typeof obj !== 'object') return obj;
+            const normalized = {};
+            for (let key in obj) {
+                const normKey = key.normalize('NFC');
+                normalized[normKey] = obj[key];
+            }
+            return normalized;
+        };
+        
+        // Vždy normalizujeme klíče barev při ukládání (ochrana proti Mac NFD)
+        AppState.suitSettings = normalizeKeys(AppState.suitSettings);
+
+        const stateToSave = { ...AppState, history: [], historyIndex: -1 };
+        localStorage.setItem('cardgen_autosave', JSON.stringify(stateToSave));
     } catch(e) { /* ignorovat - např. private mode */ }
 }
 
@@ -438,31 +362,6 @@ function renderUIFromState() {
     const cr = document.getElementById('card-radius');
     if(cr) cr.value = AppState.cardRadius;
 
-    // Pexeso UI Sync
-    if (AppState.gameMode === 'pexeso' && AppState.pexesoSettings) {
-        const ps = AppState.pexesoSettings;
-        const p_pairs = document.getElementById('pexeso-pairs-select');
-        if(p_pairs) p_pairs.value = ps.pairsCount;
-
-        const p_name = document.getElementById('pexeso-show-name');
-        if(p_name) p_name.checked = ps.showName;
-
-        const p_desc = document.getElementById('pexeso-show-desc');
-        if(p_desc) p_desc.checked = ps.showDesc;
-
-        const p_font = document.getElementById('pexeso-font-family');
-        if(p_font) p_font.value = ps.fontFamily;
-
-        const p_nx = document.getElementById('pexeso-name-x');
-        if(p_nx) p_nx.value = ps.nameOffsetX;
-        const p_ny = document.getElementById('pexeso-name-y');
-        if(p_ny) p_ny.value = ps.nameOffsetY;
-        const p_dx = document.getElementById('pexeso-desc-x');
-        if(p_dx) p_dx.value = ps.descOffsetX;
-        const p_dy = document.getElementById('pexeso-desc-y');
-        if(p_dy) p_dy.value = ps.descOffsetY;
-    }
-
     // Pokud existuje renderGrid v generator.js, zavoláme jej
     if (typeof renderGrid === 'function') {
         renderGrid();
@@ -471,26 +370,37 @@ function renderUIFromState() {
 
 // Spuštění po načtení
 window.onload = () => {
+    const normalizeKeys = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        const normalized = {};
+        for (let key in obj) {
+            const normKey = key.normalize('NFC');
+            normalized[normKey] = obj[key];
+        }
+        return normalized;
+    };
+
     const saved = localStorage.getItem('cardgen_autosave');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
+            // Normalizujeme klíče barev při načtení
+            if (parsed.suitSettings) {
+                parsed.suitSettings = normalizeKeys(parsed.suitSettings);
+            }
             AppState = { ...AppState, ...parsed, history: [], historyIndex: -1 };
             saveState();
-            // Tady NEVOLÁME initCardsByMode, pokud už v AppState karty jsou!
-            if (!AppState.cards || AppState.cards.length === 0) {
-                initCardsByMode(AppState.gameMode || 'playing_cards');
-            } else {
-                syncUIPanels(AppState.gameMode);
-                renderUIFromState();
-            }
+            initCardsByMode(AppState.gameMode || 'playing_cards');
+            renderUIFromState();
             return;
         } catch(e) {}
     }
     if (AppState.cards.length === 0) {
         initCardsByMode('playing_cards');
     } else {
-        syncUIPanels(AppState.gameMode);
+        // Normalizujeme i v případě, že karty už existují
+        AppState.suitSettings = normalizeKeys(AppState.suitSettings);
+        initCardsByMode(AppState.gameMode || 'playing_cards');
         renderUIFromState();
     }
 };
