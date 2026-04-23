@@ -555,24 +555,31 @@ function toggleIndividualOverride(enabled) {
 
     if (enabled) {
         const parts = card.id.split('_');
-        const suit = parts[0];
+        const suit = normalizedSuit(parts[0]);
         const val = parts[1] || '7';
-        const globalVal = AppState.valueSettings[val] || {offsetY:0, spacingY:1, columnX:0};
-        const globalSuit = AppState.suitSettings[suit] || {scale: 0.18, opacity: 1, offsetY:0, spacingY:1, columnX:0};
-        card.symbolOverride = { 
-            offsetX: globalVal.offsetX || 0,
-            offsetY: globalVal.offsetY,
-            spacingY: globalVal.spacingY,
-            columnX: globalVal.columnX,
-            scale: globalSuit.scale, 
-            opacity: globalSuit.opacity 
+        
+        const globalVal = AppState.valueSettings[val] || {offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0};
+        const suitCfg = getSuitConfig(suit) || {scale: 0.18, opacity: 1, offsetX: 0, offsetY: 0, spacingY: 1, columnX: 0, borderColor: '#ff0000', borderWidth: 0, inset: 0, borderRadius: 4};
+        const gS = AppState.globalSymbolSettings;
+
+        // SNAPSHOT MUSÍ OBSAHOVAT I GLOBÁLNÍ VLIVY, ABY SE ROZVRŽENÍ NEZMĚNILO
+        const baseScale = (globalVal.scale !== null && globalVal.scale !== undefined) ? globalVal.scale : (suitCfg.scale || 0.18);
+        const baseOpacity = (globalVal.opacity !== null && globalVal.opacity !== undefined) ? globalVal.opacity : (suitCfg.opacity !== undefined ? suitCfg.opacity : 1);
+
+        card.symbolOverride = {
+            scale:    baseScale * (gS.scale || 1),
+            opacity:  baseOpacity * (gS.opacity !== undefined ? gS.opacity : 1),
+            offsetX:  (globalVal.offsetX || 0) + (suitCfg.offsetX || 0) + gS.offsetX,
+            offsetY:  (globalVal.offsetY || 0) + (suitCfg.offsetY || 0) + gS.offsetY,
+            spacingY: (globalVal.spacingY !== undefined ? globalVal.spacingY : 1) * (suitCfg.spacingY !== undefined ? suitCfg.spacingY : 1) * gS.spacingY,
+            columnX:  (globalVal.columnX || 0) + (suitCfg.columnX || 0) + gS.columnX
         }; 
     } else {
         card.symbolOverride = null;
     }
     saveState();
     renderUIFromState();
-    renderGrid();
+    requestRender();
 }
 
 function updateIndividualParam(param, value) {
@@ -657,7 +664,7 @@ function updateOverlay() {
     AppState.globalOverlay.x = parseFloat(document.getElementById('overlay-x').value) || 0;
     AppState.globalOverlay.y = parseFloat(document.getElementById('overlay-y').value) || 0;
     AppState.globalOverlay.scale = (parseFloat(document.getElementById('overlay-scale').value) || 100) / 100;
-    saveState(); renderGrid();
+    debouncedSaveState(); requestRender();
 }
 
 function updateGlobalOverlayParam(param, value) {
@@ -943,6 +950,8 @@ function updateIndividualImageParam(param, value) {
     
     let val = parseFloat(value);
     if (param === 'scale') card.crop.scale = val / 100;
+    if (param === 'stretchX') card.crop.stretchX = val / 100;
+    if (param === 'stretchY') card.crop.stretchY = val / 100;
     if (param === 'x') card.crop.x = val;
     if (param === 'y') card.crop.y = val;
     
@@ -1079,6 +1088,8 @@ function renderUIFromState() {
                 imgControls.style.display = card.image ? 'block' : 'none';
                 if (card.image) {
                     setVal('ind-img-scale', Math.round(card.crop.scale * 100));
+                    setVal('ind-img-stretchX', Math.round((card.crop.stretchX !== undefined ? card.crop.stretchX : 1) * 100));
+                    setVal('ind-img-stretchY', Math.round((card.crop.stretchY !== undefined ? card.crop.stretchY : 1) * 100));
                     setVal('ind-img-x', card.crop.x);
                     setVal('ind-img-y', card.crop.y);
                     imgControls.style.opacity = card.isLocked ? 0.5 : 1;
