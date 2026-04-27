@@ -175,6 +175,7 @@ function initCardsByMode(mode) {
     const layoutGlobalPanel = document.getElementById('layout-global-panel');
     const suitGlobalPanel = document.getElementById('suit-global-panel');
     const importBtn = document.getElementById('btn-import-json');
+    const bulkBtn = document.getElementById('btn-bulk-import');
     const indQuartetControls = document.getElementById('individual-quartet-controls');
     const indLayoutControls = document.getElementById('individual-symbols-subgroup');
     const indPositionControls = document.getElementById('ind-position-subgroup');
@@ -187,6 +188,7 @@ function initCardsByMode(mode) {
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
             if (importBtn) importBtn.style.display = 'flex';
+            if (bulkBtn) bulkBtn.style.display = 'flex';
             if (indQuartetControls) indQuartetControls.style.display = 'block';
             if (indLayoutControls) indLayoutControls.style.display = 'none';
             if (indPositionControls) indPositionControls.style.display = 'none';
@@ -197,6 +199,7 @@ function initCardsByMode(mode) {
             if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'flex';
             if (suitGlobalPanel) suitGlobalPanel.style.display = 'block';
             if (importBtn) importBtn.style.display = 'none';
+            if (bulkBtn) bulkBtn.style.display = 'none';
             if (indQuartetControls) indQuartetControls.style.display = 'none';
             if (indLayoutControls) indLayoutControls.style.display = 'block';
             if (indPositionControls) indPositionControls.style.display = 'block';

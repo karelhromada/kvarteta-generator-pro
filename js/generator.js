@@ -1292,3 +1292,253 @@ document.addEventListener('input', (e) => {
         updateValueBadge(e.target.id, e.target.value);
     }
 });
+
+// --- HROMADNÝ IMPORT (CSV + obrázky) ---
+
+let bulkState = { csv: null, images: [] };
+
+function openBulkImportDialog() {
+    bulkState = { csv: null, images: [] };
+    const csvIn = document.getElementById('bulk-csv-input');
+    const imgIn = document.getElementById('bulk-img-input');
+    const csvStatus = document.getElementById('bulk-csv-status');
+    const imgStatus = document.getElementById('bulk-img-status');
+    const summary = document.getElementById('bulk-import-summary');
+    const runBtn = document.getElementById('bulk-import-run');
+    const modal = document.getElementById('bulk-import-modal');
+    if (csvIn) csvIn.value = '';
+    if (imgIn) imgIn.value = '';
+    if (csvStatus) csvStatus.textContent = 'žádný soubor';
+    if (imgStatus) imgStatus.textContent = '0 souborů';
+    if (summary) summary.textContent = '';
+    if (runBtn) runBtn.disabled = true;
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeBulkImportDialog() {
+    const modal = document.getElementById('bulk-import-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function refreshBulkRunButton() {
+    const ready = !!bulkState.csv || bulkState.images.length > 0;
+    const runBtn = document.getElementById('bulk-import-run');
+    if (runBtn) runBtn.disabled = !ready;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const csvIn = document.getElementById('bulk-csv-input');
+    const imgIn = document.getElementById('bulk-img-input');
+    const modal = document.getElementById('bulk-import-modal');
+
+    if (csvIn) {
+        csvIn.addEventListener('change', (e) => {
+            bulkState.csv = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+            const status = document.getElementById('bulk-csv-status');
+            if (status) status.textContent = bulkState.csv ? bulkState.csv.name : 'žádný soubor';
+            refreshBulkRunButton();
+        });
+    }
+    if (imgIn) {
+        imgIn.addEventListener('change', (e) => {
+            bulkState.images = Array.from(e.target.files || []);
+            const status = document.getElementById('bulk-img-status');
+            if (status) status.textContent = `${bulkState.images.length} souborů`;
+            refreshBulkRunButton();
+        });
+    }
+    // Klik mimo dialog ho zavře
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeBulkImportDialog();
+        });
+    }
+});
+
+/**
+ * Lite RFC 4180 CSV parser:
+ * - podporuje uvozovky (escapované zdvojením "")
+ * - oddělovač: čárka i středník (Excel CZ)
+ * - odstraňuje BOM
+ * Vrací pole objektů (řádky) klíčované hlavičkou.
+ */
+function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+            if (c === '"' && text[i + 1] === '"') {
+                field += '"';
+                i++;
+            } else if (c === '"') {
+                inQuotes = false;
+            } else {
+                field += c;
+            }
+        } else {
+            if (c === '"') {
+                inQuotes = true;
+            } else if (c === ',' || c === ';') {
+                row.push(field);
+                field = '';
+            } else if (c === '\n') {
+                row.push(field);
+                rows.push(row);
+                row = [];
+                field = '';
+            } else if (c === '\r') {
+                // skip
+            } else {
+                field += c;
+            }
+        }
+    }
+    if (field.length || row.length) {
+        row.push(field);
+        rows.push(row);
+    }
+    if (!rows.length) return [];
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1)
+        .filter(r => r.some(c => (c || '').trim() !== ''))
+        .map(r => {
+            const obj = {};
+            headers.forEach((h, i) => {
+                obj[h] = (r[i] !== undefined ? r[i] : '').trim();
+            });
+            return obj;
+        });
+}
+
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function performBulkImport() {
+    const summaryEl = document.getElementById('bulk-import-summary');
+    const runBtn = document.getElementById('bulk-import-run');
+    if (runBtn) runBtn.disabled = true;
+    if (summaryEl) summaryEl.textContent = 'Zpracovávám…';
+
+    try {
+        // 1) CSV → řádky
+        let rows = [];
+        if (bulkState.csv) {
+            const text = await bulkState.csv.text();
+            rows = parseCSV(text.normalize('NFC'));
+        }
+
+        // 2) Obrázky → Map<ID, base64>
+        const imageMap = new Map();
+        for (const file of bulkState.images) {
+            const id = file.name.replace(/\.(png|jpe?g|webp)$/i, '').toUpperCase().trim();
+            if (!id) continue;
+            try {
+                const base64 = await readFileAsDataURL(file);
+                imageMap.set(id, base64);
+            } catch (e) {
+                console.error('Selhal čtení souboru', file.name, e);
+            }
+        }
+
+        // 3) Aplikovat na karty
+        const reserved = new Set([
+            'ID', 'Id', 'id',
+            'Jméno', 'Name',
+            'Popis', 'Český popis', 'Description',
+            'Skupina', 'Group', '#'
+        ]);
+
+        let csvMatched = 0;
+        const csvUnmatched = [];
+
+        rows.forEach((row, rowIdx) => {
+            const rawId = (row.ID || row.Id || row.id || '').toString().toUpperCase().trim();
+            if (!rawId) return;
+            const card = AppState.cards.find(c => c.id === `q_${rawId}`);
+            if (!card) {
+                csvUnmatched.push(rawId);
+                return;
+            }
+            if (!card.quartetData) {
+                card.quartetData = { name: '', description: '', stats: ['', '', '', ''] };
+            }
+            if (row['Jméno'] || row['Name']) {
+                card.quartetData.name = row['Jméno'] || row['Name'];
+            }
+            if (row['Popis'] || row['Český popis'] || row['Description']) {
+                card.quartetData.description = row['Popis'] || row['Český popis'] || row['Description'];
+            }
+
+            let sidx = 0;
+            for (const [key, value] of Object.entries(row)) {
+                if (reserved.has(key)) continue;
+                if (sidx < 4) {
+                    card.quartetData.stats[sidx] = value;
+                    if (rowIdx === 0) {
+                        AppState.quartetSettings.attributeNames[sidx] = key;
+                    }
+                    sidx++;
+                }
+            }
+            csvMatched++;
+        });
+
+        let imgMatched = 0;
+        const imgUnmatched = [];
+        for (const [id, b64] of imageMap.entries()) {
+            const card = AppState.cards.find(c => c.id === `q_${id}`);
+            if (card) {
+                card.image = b64;
+                // Reset oříznutí na default, aby nový obrázek byl viditelný
+                card.crop = { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 };
+                imgMatched++;
+            } else {
+                imgUnmatched.push(id);
+            }
+        }
+
+        // 4) Uložit + re-render
+        let storageWarning = '';
+        try {
+            saveState();
+        } catch (e) {
+            console.error('saveState failed', e);
+            storageWarning = ' ⚠️ Autosave selhal (localStorage limit) — exportujte projekt!';
+        }
+        renderUIFromState();
+
+        // 5) Summary
+        const parts = [];
+        if (bulkState.csv) {
+            parts.push(`Tabulka: ${csvMatched} řádků` + (csvUnmatched.length ? `, neznámé ID: ${csvUnmatched.join(', ')}` : ''));
+        }
+        if (bulkState.images.length) {
+            parts.push(`Obrázky: ${imgMatched}/${bulkState.images.length} přiřazeno` + (imgUnmatched.length ? `, bez karty: ${imgUnmatched.join(', ')}` : ''));
+        }
+        if (!parts.length) parts.push('Nebyl vybrán žádný soubor.');
+        if (summaryEl) summaryEl.textContent = parts.join(' • ') + storageWarning;
+
+        // Zavřít modal po krátké pauze, aby si uživatel přečetl summary
+        if (csvMatched > 0 || imgMatched > 0) {
+            setTimeout(() => {
+                closeBulkImportDialog();
+            }, 1800);
+        } else if (runBtn) {
+            runBtn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        if (summaryEl) summaryEl.textContent = 'Chyba: ' + (err.message || err);
+        if (runBtn) runBtn.disabled = false;
+    }
+}

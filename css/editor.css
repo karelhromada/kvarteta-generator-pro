@@ -609,3 +609,98 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-size: 1rem; z-index: 20; color: inherit;
     box-shadow: 0 0 10px rgba(0,0,0,0.8);
 }
+
+/* --- Hromadný import (modal) --- */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: var(--bg-panel);
+    color: var(--text);
+    padding: 24px 28px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    min-width: 480px;
+    max-width: 640px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.modal-content h2 {
+    margin: 0 0 12px 0;
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+.modal-content .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+.modal-content .hint code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text);
+}
+.bulk-zone {
+    display: block;
+    margin: 10px 0;
+    padding: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+.bulk-zone:hover {
+    border-color: var(--accent);
+    background: rgba(234, 179, 8, 0.04);
+}
+.bulk-zone strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text);
+    font-size: 13px;
+}
+.bulk-zone input[type="file"] {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.status-line {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+#bulk-import-summary:not(:empty) {
+    margin-top: 12px;
+    padding: 8px 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid #10b981;
+    border-radius: 3px;
+    color: var(--text);
+    font-size: 12px;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+.modal-actions .action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+}
+.modal-actions .action-btn.primary {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+.modal-actions .action-btn.primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

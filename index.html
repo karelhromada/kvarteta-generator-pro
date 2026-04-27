@@ -41,6 +41,9 @@
                 🎲 Import JSON
                 <input type="file" accept=".json" style="display:none;" onchange="importKvartetaJSON(event)">
             </label>
+            <button id="btn-bulk-import" class="action-btn primary" title="Hromadný import obrázků + CSV (pouze pro Kvarteta)" style="display:none; background-color:#3b82f6; border:none;" onclick="openBulkImportDialog()">
+                📦 Hromadný import
+            </button>
             <button class="action-btn primary" onclick="exportProject()">⭳ Uložit Projekt</button>
         </div>
     </nav>
@@ -1267,6 +1270,37 @@
             </div>
         </section>
     </main>
+
+    <!-- Modal pro hromadný import (Kvarteta) -->
+    <div id="bulk-import-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2>Hromadný import — Kvarteta</h2>
+            <p class="hint">
+                CSV musí mít sloupec <code>ID</code> (1A–8D), volitelně
+                <code>Jméno</code> a <code>Popis</code>, a 4 sloupce s vlastnostmi.
+                Obrázky pojmenujte podle ID, např. <code>1A.png</code>, <code>2C.jpg</code>, <code>8D.webp</code>.
+            </p>
+
+            <label class="bulk-zone">
+                <strong>1) Tabulka (CSV)</strong>
+                <input type="file" id="bulk-csv-input" accept=".csv,text/csv">
+                <span id="bulk-csv-status" class="status-line">žádný soubor</span>
+            </label>
+
+            <label class="bulk-zone">
+                <strong>2) Obrázky (PNG / JPEG / WebP)</strong>
+                <input type="file" id="bulk-img-input" accept="image/png,image/jpeg,image/webp" multiple>
+                <span id="bulk-img-status" class="status-line">0 souborů</span>
+            </label>
+
+            <div id="bulk-import-summary" class="status-line"></div>
+
+            <div class="modal-actions">
+                <button class="action-btn" onclick="closeBulkImportDialog()">Zrušit</button>
+                <button id="bulk-import-run" class="action-btn primary" onclick="performBulkImport()" disabled>Importovat</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Skripty -->
     <script src="js/state.js"></script>
