@@ -1144,8 +1144,113 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Sekce: VLASTNÍ TEXT (jen na figurách: Eso/Král/Svršek/Spodek) -->
+                <div id="individual-text-section" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px; display:none;">
+                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px; letter-spacing:1px;">VLASTNÍ TEXT</h4>
+                        <div class="control-row">
+                            <label>Zapnout text</label>
+                            <input type="checkbox" id="ind-text-enabled" onchange="toggleCardText(this.checked)">
+                        </div>
+                        <div id="ind-text-controls" style="opacity:0.4; pointer-events:none;">
+                            <div class="control-group">
+                                <label>Obsah</label>
+                                <textarea id="ind-text-content" rows="2" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px; font-size:12px;" oninput="updateCardText('text', this.value)"></textarea>
+                            </div>
+                            <div class="control-group">
+                                <label>Font</label>
+                                <select id="ind-text-font" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" onchange="updateCardText('font', this.value)">
+                                    <option value="'Cinzel', serif">Cinzel</option>
+                                    <option value="'Playfair Display', serif">Playfair Display</option>
+                                    <option value="'Oswald', sans-serif">Oswald</option>
+                                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                                    <option value="'Roboto', sans-serif">Roboto</option>
+                                    <option value="'Inter', sans-serif">Inter</option>
+                                    <option value="serif">Serif (system)</option>
+                                    <option value="sans-serif">Sans-serif (system)</option>
+                                    <option value="monospace">Monospace</option>
+                                </select>
+                            </div>
+                            <div class="control-row">
+                                <label>Velikost (px)</label>
+                                <input type="range" id="ind-text-size" min="6" max="60" value="18" step="1" oninput="updateCardText('size', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Barva</label>
+                                <input type="color" id="ind-text-color" value="#ffffff" style="width:60px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateCardText('color', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Tučně</label>
+                                <input type="checkbox" id="ind-text-bold" onchange="updateCardText('bold', this.checked)">
+                            </div>
+                            <div class="control-row">
+                                <label>Kurzíva</label>
+                                <input type="checkbox" id="ind-text-italic" onchange="updateCardText('italic', this.checked)">
+                            </div>
+                            <div class="control-group">
+                                <label>Zarovnání</label>
+                                <select id="ind-text-align" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" onchange="updateCardText('align', this.value)">
+                                    <option value="center">Střed</option>
+                                    <option value="left">Vlevo</option>
+                                    <option value="right">Vpravo</option>
+                                </select>
+                            </div>
+                            <div class="control-row">
+                                <label>Posun X</label>
+                                <input type="range" id="ind-text-x" min="-200" max="200" value="0" oninput="updateCardText('x', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Posun Y</label>
+                                <input type="range" id="ind-text-y" min="-300" max="300" value="0" oninput="updateCardText('y', this.value)">
+                            </div>
+                            <div style="margin-top:10px;">
+                                <button onclick="resetCardText()" class="action-btn minor" style="width:100%; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat text</button>
+                            </div>
+                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Text můžeš v náhledu chytit a táhnout myší.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sekce: LOGO KARTY (nezávislá vrstva navíc nad globálním logem) -->
+                    <div id="individual-card-logo-section" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px; letter-spacing:1px;">LOGO KARTY</h4>
+                        <label class="upload-btn minor" style="width:100%;">
+                            <input type="file" accept="image/*" style="display:none;" onchange="handleCardLogoUpload(event)">
+                            <span>+ Nahrát logo karty</span>
+                        </label>
+                        <div id="ind-cardlogo-controls" style="display:none; margin-top:15px;">
+                            <div class="control-row">
+                                <label>Průhlednost (%)</label>
+                                <input type="range" id="ind-cardlogo-opacity" min="0" max="100" value="100" oninput="updateCardLogo('opacity', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Měřítko (%)</label>
+                                <input type="range" id="ind-cardlogo-scale" min="5" max="200" value="30" oninput="updateCardLogo('scale', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Šířka X (%)</label>
+                                <input type="range" id="ind-cardlogo-stretchX" min="10" max="400" value="100" oninput="updateCardLogo('stretchX', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Výška Y (%)</label>
+                                <input type="range" id="ind-cardlogo-stretchY" min="10" max="400" value="100" oninput="updateCardLogo('stretchY', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Posun X</label>
+                                <input type="range" id="ind-cardlogo-x" min="-200" max="200" value="0" oninput="updateCardLogo('x', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Posun Y</label>
+                                <input type="range" id="ind-cardlogo-y" min="-300" max="300" value="0" oninput="updateCardLogo('y', this.value)">
+                            </div>
+                            <div style="margin-top:10px;">
+                                <button onclick="resetCardLogo()" class="action-btn minor" style="width:100%; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat logo karty</button>
+                            </div>
+                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Logo můžeš v náhledu chytit a táhnout myší.</p>
+                        </div>
+                    </div>
                 <button class="action-btn minor full-width" style="margin-top:10px" onclick="resetIndividualLayout()">Reset na globální</button>
             </div>
+            <!-- /individual-layout-panel -->
 
             <div class="panel-section">
                 <h3>Globální Overlay (Vrstva 2)</h3>

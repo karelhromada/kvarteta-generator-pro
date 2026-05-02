@@ -36,6 +36,13 @@ function normalizedSuit(name) {
     return name.normalize('NFC');
 }
 
+const FIGURE_VALUES = ['Eso', 'Král', 'Svršek', 'Spodek'];
+function isFigureCard(card) {
+    if (!card || AppState.gameMode !== 'playing_cards') return false;
+    const val = card.id.split('_')[1];
+    return FIGURE_VALUES.includes(normalizedSuit(val));
+}
+
 // Bezpečné získání nastavení barvy (suit) - nezávislé na kódování klíčů
 function getSuitConfig(name) {
     if (!name) return null;
@@ -142,6 +149,20 @@ function createCardElement(card) {
         cardEl.appendChild(logo);
     }
 
+    // VRSTVA 1.5: PER-CARD LOGO (nezávislá vrstva navíc nad globálním logem)
+    if (card.cardLogo && card.cardLogo.image) {
+        const cl = card.cardLogo;
+        const cardLogoEl = document.createElement('div');
+        cardLogoEl.className = 'card-logo-individual';
+        cardLogoEl.dataset.layer = 'cardLogo';
+        cardLogoEl.style.backgroundImage = `url(${cl.image})`;
+        cardLogoEl.style.opacity = (cl.opacity !== undefined) ? cl.opacity : 1;
+        const sX = (cl.stretchX !== undefined) ? cl.stretchX : 1;
+        const sY = (cl.stretchY !== undefined) ? cl.stretchY : 1;
+        cardLogoEl.style.transform = `translate(calc(-50% + ${cl.x}px), calc(-50% + ${cl.y}px)) scale(${cl.scale * sX}, ${cl.scale * sY})`;
+        cardEl.appendChild(cardLogoEl);
+    }
+
     // VRSTVA 2: GLOBÁLNÍ RÁM
     const overlay = document.createElement('div');
     overlay.className = 'card-overlay';
@@ -183,6 +204,27 @@ function createCardElement(card) {
         drawQuartetOverlay(cardEl, card);
     } else if (AppState.showSymbols) {
         drawSymbols(cardEl, card);
+    }
+
+    // VRSTVA 4.5: PER-CARD TEXT (jen na figurách: Eso/Král/Svršek/Spodek)
+    if (card.textOverlay && card.textOverlay.text && isFigureCard(card)) {
+        const t = card.textOverlay;
+        const txt = document.createElement('div');
+        txt.className = 'card-text-overlay';
+        txt.dataset.layer = 'textOverlay';
+        txt.innerText = t.text;
+        txt.style.fontFamily = t.font || "'Cinzel', serif";
+        // Velikost je v "px" v souřadnicích karty (ne mm) — škálujeme přes scaleUi
+        txt.style.fontSize = ((t.size || 16) * scaleUi / 3.78) + 'px';
+        txt.style.color = t.color || '#ffffff';
+        txt.style.fontWeight = t.bold ? '700' : '400';
+        txt.style.fontStyle = t.italic ? 'italic' : 'normal';
+        txt.style.textAlign = t.align || 'center';
+        // X/Y jsou v px náhledu (stejně jako logo/obrázek), aby drag fungoval konzistentně
+        txt.style.left = `calc(50% + ${(t.x || 0)}px)`;
+        txt.style.top = `calc(50% + ${(t.y || 0)}px)`;
+        txt.style.transform = 'translate(-50%, -50%)';
+        cardEl.appendChild(txt);
     }
 
     const label = document.createElement('div');
@@ -969,6 +1011,115 @@ function resetIndividualImage() {
     }
 }
 
+// ===== PER-CARD TEXT (jen na figurách) ===== //
+
+function defaultTextOverlay(card) {
+    return {
+        text: card.label || '',
+        font: "'Cinzel', serif",
+        size: 18,
+        color: '#ffffff',
+        bold: true,
+        italic: false,
+        x: 0,
+        y: 0,
+        align: 'center'
+    };
+}
+
+function toggleCardText(enabled) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+    if (enabled) {
+        if (!card.textOverlay) card.textOverlay = defaultTextOverlay(card);
+    } else {
+        card.textOverlay = null;
+    }
+    debouncedSaveState();
+    renderUIFromState();
+}
+
+function updateCardText(param, value) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+    if (!card.textOverlay) card.textOverlay = defaultTextOverlay(card);
+
+    if (param === 'text' || param === 'font' || param === 'color' || param === 'align') {
+        card.textOverlay[param] = value;
+    } else if (param === 'bold' || param === 'italic') {
+        card.textOverlay[param] = !!value;
+    } else if (param === 'size' || param === 'x' || param === 'y') {
+        card.textOverlay[param] = parseFloat(value) || 0;
+    }
+    debouncedSaveState();
+    requestCardRender(card.id);
+}
+
+function resetCardText() {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+    card.textOverlay = null;
+    debouncedSaveState();
+    renderUIFromState();
+}
+
+// ===== PER-CARD LOGO (nezávislá vrstva navíc) ===== //
+
+function defaultCardLogo(image) {
+    return {
+        image: image,
+        opacity: 1,
+        scale: 0.3,
+        x: 0,
+        y: 0,
+        stretchX: 1,
+        stretchY: 1
+    };
+}
+
+function handleCardLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !file.type.startsWith('image/') || !AppState.activeCardId) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+        if (!card) return;
+        card.cardLogo = defaultCardLogo(e.target.result);
+        debouncedSaveState();
+        renderUIFromState();
+    };
+    reader.readAsDataURL(file);
+}
+
+function updateCardLogo(param, value) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card || !card.cardLogo) return;
+
+    let val = parseFloat(value);
+    if (param === 'opacity') card.cardLogo.opacity = val / 100;
+    else if (param === 'scale') card.cardLogo.scale = val / 100;
+    else if (param === 'stretchX') card.cardLogo.stretchX = val / 100;
+    else if (param === 'stretchY') card.cardLogo.stretchY = val / 100;
+    else if (param === 'x') card.cardLogo.x = val;
+    else if (param === 'y') card.cardLogo.y = val;
+
+    debouncedSaveState();
+    requestCardRender(card.id);
+}
+
+function resetCardLogo() {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+    card.cardLogo = null;
+    debouncedSaveState();
+    renderUIFromState();
+}
+
 function renderUIFromState() {
     // 1. ZÁKLADNÍ NASTAVENÍ PROJEKTU
     const setVal = (id, val) => { 
@@ -1104,6 +1255,48 @@ function renderUIFromState() {
                 setVal('ind-q-desc', qd.description);
                 for(let i=0; i<4; i++) {
                     setVal(`ind-q-stat${i}`, qd.stats[i] || '');
+                }
+            }
+
+            // Sync sekce VLASTNÍ TEXT — viditelná jen pro figury (Eso/Král/Svršek/Spodek)
+            const textSection = document.getElementById('individual-text-section');
+            if (textSection) {
+                const isFigure = isFigureCard(card);
+                textSection.style.display = isFigure ? 'block' : 'none';
+                if (isFigure) {
+                    const enabled = !!card.textOverlay;
+                    setChecked('ind-text-enabled', enabled);
+                    const textCtrls = document.getElementById('ind-text-controls');
+                    if (textCtrls) {
+                        textCtrls.style.opacity = enabled ? 1 : 0.4;
+                        textCtrls.style.pointerEvents = enabled ? 'auto' : 'none';
+                    }
+                    const t = card.textOverlay || defaultTextOverlay(card);
+                    setVal('ind-text-content', t.text);
+                    setVal('ind-text-font', t.font);
+                    setVal('ind-text-size', t.size);
+                    setVal('ind-text-color', t.color);
+                    setChecked('ind-text-bold', !!t.bold);
+                    setChecked('ind-text-italic', !!t.italic);
+                    setVal('ind-text-align', t.align);
+                    setVal('ind-text-x', t.x);
+                    setVal('ind-text-y', t.y);
+                }
+            }
+
+            // Sync sekce LOGO KARTY — viditelná u všech karet
+            const logoCtrls = document.getElementById('ind-cardlogo-controls');
+            if (logoCtrls) {
+                const has = !!(card.cardLogo && card.cardLogo.image);
+                logoCtrls.style.display = has ? 'block' : 'none';
+                if (has) {
+                    const cl = card.cardLogo;
+                    setVal('ind-cardlogo-opacity', Math.round((cl.opacity !== undefined ? cl.opacity : 1) * 100));
+                    setVal('ind-cardlogo-scale', Math.round(cl.scale * 100));
+                    setVal('ind-cardlogo-stretchX', Math.round((cl.stretchX !== undefined ? cl.stretchX : 1) * 100));
+                    setVal('ind-cardlogo-stretchY', Math.round((cl.stretchY !== undefined ? cl.stretchY : 1) * 100));
+                    setVal('ind-cardlogo-x', cl.x);
+                    setVal('ind-cardlogo-y', cl.y);
                 }
             }
         }

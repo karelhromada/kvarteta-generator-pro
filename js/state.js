@@ -219,6 +219,8 @@ function createEmptyCard(id, label) {
         crop: { x: 0, y: 0, scale: 1, stretchX: 1, stretchY: 1 },
         isLocked: false,
         symbolOverride: null, // Initial value
+        textOverlay: null,    // null = vypnuto; jinak { text, font, size, color, bold, italic, x, y, align }
+        cardLogo: null,       // null = vypnuto; jinak { image, opacity, scale, x, y, stretchX, stretchY }
         quartetData: {
             name: "",
             description: "",

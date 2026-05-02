@@ -2,11 +2,23 @@
 
 let isDragging = false;
 let startX, startY;
+let dragLayer = null; // 'cardLogo' | 'textOverlay' | null — pokud se táhne přímo per-card vrstva
 
 // Registrace globálních událostí pro manipulaci s aktivní kartou
 document.addEventListener('mousedown', (e) => {
-    // Ověříme, zda klikáme do workspace
+    // Pokud klik dopadl přímo na per-card vrstvu (logo/text), tu táhneme
+    const layerEl = e.target.closest('[data-layer]');
+    if (layerEl && layerEl.closest('.preview-card')) {
+        dragLayer = layerEl.dataset.layer;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        e.stopPropagation();
+        return;
+    }
+    // Jinak standardní manipulace s ilustrací karty
     if (e.target.closest('.preview-card')) {
+        dragLayer = null;
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
@@ -18,13 +30,33 @@ document.addEventListener('mousemove', (e) => {
 
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
-    
+
+    // Per-card vrstva (logo / text) — má přednost před klávesovými modifikátory
+    if (dragLayer && AppState.activeCardId) {
+        const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+        if (card && !card.isLocked && card[dragLayer]) {
+            card[dragLayer].x = (card[dragLayer].x || 0) + dx;
+            card[dragLayer].y = (card[dragLayer].y || 0) + dy;
+            renderCard(card.id);
+            // Sync slider
+            const xId = dragLayer === 'cardLogo' ? 'ind-cardlogo-x' : 'ind-text-x';
+            const yId = dragLayer === 'cardLogo' ? 'ind-cardlogo-y' : 'ind-text-y';
+            const slX = document.getElementById(xId);
+            const slY = document.getElementById(yId);
+            if (slX) slX.value = card[dragLayer].x;
+            if (slY) slY.value = card[dragLayer].y;
+        }
+        startX = e.clientX;
+        startY = e.clientY;
+        return;
+    }
+
     // SHIFT + Drag -> Panning Globálního RÁMU (Layer 2)
     if (e.shiftKey) {
         AppState.globalOverlay.x += dx;
         AppState.globalOverlay.y += dy;
         renderGrid();
-    } 
+    }
     // ALT + Drag -> Panning Globálního LOGA (Layer 1)
     else if (e.altKey) {
         AppState.globalLogo.x += dx;
@@ -38,8 +70,8 @@ document.addEventListener('mousemove', (e) => {
             card.crop.x += dx;
             card.crop.y += dy;
             updateCardTransform(card);
-            
-            // Sync s UI 
+
+            // Sync s UI
             const slX = document.getElementById('ind-img-x');
             const slY = document.getElementById('ind-img-y');
             if (slX) slX.value = card.crop.x;
@@ -54,6 +86,7 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('mouseup', () => {
     if (isDragging) {
         isDragging = false;
+        dragLayer = null;
         saveState(); // Uložíme finální pozici do historie
     }
 });
