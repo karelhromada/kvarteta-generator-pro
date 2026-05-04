@@ -1084,13 +1084,21 @@ function defaultCardLogo(image) {
 
 function handleCardLogoUpload(event) {
     const file = event.target.files[0];
-    if (!file || !file.type.startsWith('image/') || !AppState.activeCardId) return;
+    // Zachytíme aktivní kartu hned (kdyby se mezitím přepnula)
+    const cardId = AppState.activeCardId;
+    // Reset hodnoty inputu okamžitě — bez toho by browser nezavolal onchange
+    // při výběru stejného souboru na jinou kartu (známé chování <input type="file">).
+    event.target.value = '';
+    if (!file || !file.type.startsWith('image/') || !cardId) {
+        if (!cardId) alert('Nejprve klikni na kartu, na kterou chceš logo nahrát.');
+        return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
-        const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+        const card = AppState.cards.find(c => c.id === cardId);
         if (!card) return;
         card.cardLogo = defaultCardLogo(e.target.result);
-        debouncedSaveState();
+        saveState();
         renderUIFromState();
     };
     reader.readAsDataURL(file);
