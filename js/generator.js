@@ -106,11 +106,13 @@ function updateValueBadge(id, value) {
     if (badge) {
         // Formátování: Pokud je to měřítko/průhlednost v %, přidáme %, jinak mm nebo jen číslo
         let suffix = '';
-        if (id.includes('scale') || id.includes('opacity') || id.includes('spacing') || id.includes('offset-x') || id.includes('offset-y')) suffix = '%';
+        if (id.includes('scale') || id.includes('opacity') || id.includes('spacing') || id.includes('stretch') || id.includes('offset-x') || id.includes('offset-y')) suffix = '%';
         else if (id.includes('offsetX') || id.includes('offsetY') || id.includes('columnX') || id.includes('inset')) suffix = 'mm';
         else if (id.includes('borderWidth') || id.includes('border-width')) suffix = 'px';
+        else if (id === 'ind-text-size') suffix = 'px';
+        else if (/-x$|-y$/.test(id)) suffix = 'px'; // ind-text-x, ind-text-y, ind-cardlogo-x, ind-cardlogo-y
         else if (id.includes('size')) suffix = ''; // Generic size usually factor or px
-        
+
         badge.innerText = value + suffix;
     }
 }
@@ -1117,6 +1119,31 @@ function resetCardLogo() {
     if (!card) return;
     card.cardLogo = null;
     debouncedSaveState();
+    renderUIFromState();
+}
+
+// Aplikuje cardLogo aktivní karty (vč. obrázku, polohy, scale, opacity) do všech karet sady.
+// Cíl: uživatel vyladí logo na nejlépe vyhovující kartě a tlačítkem ho rozkopíruje na zbytek.
+function applyCardLogoToAll() {
+    if (!AppState.activeCardId) {
+        alert('Nejprve vyber kartu, jejíž logo chceš zkopírovat na ostatní.');
+        return;
+    }
+    const source = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!source || !source.cardLogo || !source.cardLogo.image) {
+        alert('Aktivní karta nemá nahrané logo karty. Nahraj logo a vyladi ho, pak ho aplikuj na všechny.');
+        return;
+    }
+    const total = AppState.cards.length;
+    if (!confirm(`Zkopírovat logo karty z „${source.label}" do všech ${total} karet sady? Existující per-card logo na ostatních kartách bude přepsáno.`)) {
+        return;
+    }
+    AppState.cards.forEach(c => {
+        if (c.id === source.id) return;
+        // Hluboká kopie přes JSON — bezpečně přenese i image dataURL
+        c.cardLogo = JSON.parse(JSON.stringify(source.cardLogo));
+    });
+    saveState();
     renderUIFromState();
 }
 

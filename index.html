@@ -1199,9 +1199,12 @@
                                     </optgroup>
                                 </select>
                             </div>
-                            <div class="control-row">
-                                <label>Velikost (px)</label>
-                                <input type="range" id="ind-text-size" min="6" max="60" value="18" step="1" oninput="updateCardText('size', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Velikost (px)</label>
+                                    <span class="value-badge" id="val-ind-text-size">18px</span>
+                                </div>
+                                <input type="range" id="ind-text-size" min="6" max="60" value="18" step="1" oninput="updateCardText('size', this.value); updateValueBadge(this.id, this.value)">
                             </div>
                             <div class="control-row">
                                 <label>Barva</label>
@@ -1223,13 +1226,27 @@
                                     <option value="right">Vpravo</option>
                                 </select>
                             </div>
-                            <div class="control-row">
-                                <label>Posun X</label>
-                                <input type="range" id="ind-text-x" min="-200" max="200" value="0" oninput="updateCardText('x', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Posun X</label>
+                                    <span class="value-badge" id="val-ind-text-x">0px</span>
+                                </div>
+                                <div class="slider-stepper">
+                                    <button class="step-btn" onclick="adjustSlider('ind-text-x', -1)">-</button>
+                                    <input type="range" id="ind-text-x" min="-200" max="200" value="0" step="1" oninput="updateCardText('x', this.value); updateValueBadge(this.id, this.value)">
+                                    <button class="step-btn" onclick="adjustSlider('ind-text-x', 1)">+</button>
+                                </div>
                             </div>
-                            <div class="control-row">
-                                <label>Posun Y</label>
-                                <input type="range" id="ind-text-y" min="-300" max="300" value="0" oninput="updateCardText('y', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Posun Y</label>
+                                    <span class="value-badge" id="val-ind-text-y">0px</span>
+                                </div>
+                                <div class="slider-stepper">
+                                    <button class="step-btn" onclick="adjustSlider('ind-text-y', -1)">-</button>
+                                    <input type="range" id="ind-text-y" min="-300" max="300" value="0" step="1" oninput="updateCardText('y', this.value); updateValueBadge(this.id, this.value)">
+                                    <button class="step-btn" onclick="adjustSlider('ind-text-y', 1)">+</button>
+                                </div>
                             </div>
                             <div style="margin-top:10px;">
                                 <button onclick="resetCardText()" class="action-btn minor" style="width:100%; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat text</button>
@@ -1246,34 +1263,63 @@
                             <span>+ Nahrát logo karty</span>
                         </label>
                         <div id="ind-cardlogo-controls" style="display:none; margin-top:15px;">
-                            <div class="control-row">
-                                <label>Průhlednost (%)</label>
-                                <input type="range" id="ind-cardlogo-opacity" min="0" max="100" value="100" oninput="updateCardLogo('opacity', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Průhlednost (%)</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-opacity">100%</span>
+                                </div>
+                                <input type="range" id="ind-cardlogo-opacity" min="0" max="100" value="100" oninput="updateCardLogo('opacity', this.value); updateValueBadge(this.id, this.value)">
                             </div>
-                            <div class="control-row">
-                                <label>Měřítko (%)</label>
-                                <input type="range" id="ind-cardlogo-scale" min="5" max="200" value="30" oninput="updateCardLogo('scale', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Měřítko (%)</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-scale">30%</span>
+                                </div>
+                                <input type="range" id="ind-cardlogo-scale" min="5" max="200" value="30" oninput="updateCardLogo('scale', this.value); updateValueBadge(this.id, this.value)">
                             </div>
-                            <div class="control-row">
-                                <label>Šířka X (%)</label>
-                                <input type="range" id="ind-cardlogo-stretchX" min="10" max="400" value="100" oninput="updateCardLogo('stretchX', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Šířka X (%)</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-stretchX">100%</span>
+                                </div>
+                                <input type="range" id="ind-cardlogo-stretchX" min="10" max="400" value="100" oninput="updateCardLogo('stretchX', this.value); updateValueBadge(this.id, this.value)">
                             </div>
-                            <div class="control-row">
-                                <label>Výška Y (%)</label>
-                                <input type="range" id="ind-cardlogo-stretchY" min="10" max="400" value="100" oninput="updateCardLogo('stretchY', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Výška Y (%)</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-stretchY">100%</span>
+                                </div>
+                                <input type="range" id="ind-cardlogo-stretchY" min="10" max="400" value="100" oninput="updateCardLogo('stretchY', this.value); updateValueBadge(this.id, this.value)">
                             </div>
-                            <div class="control-row">
-                                <label>Posun X</label>
-                                <input type="range" id="ind-cardlogo-x" min="-200" max="200" value="0" oninput="updateCardLogo('x', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Posun X</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-x">0px</span>
+                                </div>
+                                <div class="slider-stepper">
+                                    <button class="step-btn" onclick="adjustSlider('ind-cardlogo-x', -1)">-</button>
+                                    <input type="range" id="ind-cardlogo-x" min="-200" max="200" value="0" step="1" oninput="updateCardLogo('x', this.value); updateValueBadge(this.id, this.value)">
+                                    <button class="step-btn" onclick="adjustSlider('ind-cardlogo-x', 1)">+</button>
+                                </div>
                             </div>
-                            <div class="control-row">
-                                <label>Posun Y</label>
-                                <input type="range" id="ind-cardlogo-y" min="-300" max="300" value="0" oninput="updateCardLogo('y', this.value)">
+                            <div class="control-group">
+                                <div class="control-header">
+                                    <label>Posun Y</label>
+                                    <span class="value-badge" id="val-ind-cardlogo-y">0px</span>
+                                </div>
+                                <div class="slider-stepper">
+                                    <button class="step-btn" onclick="adjustSlider('ind-cardlogo-y', -1)">-</button>
+                                    <input type="range" id="ind-cardlogo-y" min="-300" max="300" value="0" step="1" oninput="updateCardLogo('y', this.value); updateValueBadge(this.id, this.value)">
+                                    <button class="step-btn" onclick="adjustSlider('ind-cardlogo-y', 1)">+</button>
+                                </div>
                             </div>
-                            <div style="margin-top:10px;">
+                            <div style="margin-top:12px;">
+                                <button onclick="applyCardLogoToAll()" class="action-btn primary" style="width:100%; background:#10b981; border:none; color:#fff;">📌 Aplikovat logo na všechny karty</button>
+                            </div>
+                            <div style="margin-top:8px;">
                                 <button onclick="resetCardLogo()" class="action-btn minor" style="width:100%; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat logo karty</button>
                             </div>
-                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Logo můžeš v náhledu chytit a táhnout myší.</p>
+                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Logo můžeš v náhledu chytit a táhnout myší. Tlačítkem „Aplikovat na všechny" zkopíruješ aktuální nastavení loga (vč. obrázku, polohy, velikosti) do všech karet sady.</p>
                         </div>
                     </div>
                 <button class="action-btn minor full-width" style="margin-top:10px" onclick="resetIndividualLayout()">Reset na globální</button>
