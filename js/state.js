@@ -149,7 +149,7 @@ let AppState = {
 const MODE_CARD_SIZES = {
     'playing_cards': { width: 63, height: 105 },
     'quartet':       { width: 65, height: 95 },
-    'pexeso':        { width: 63, height: 88 }
+    'pexeso':        { width: 50, height: 50 }
 };
 
 function initCardsByMode(mode) {
