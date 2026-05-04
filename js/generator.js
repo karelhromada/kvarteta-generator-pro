@@ -144,10 +144,13 @@ function createCardElement(card) {
     if (AppState.globalLogo.image) {
         const logo = document.createElement('div');
         logo.className = 'card-logo';
-        logo.style.backgroundImage = `url(${AppState.globalLogo.image})`;
         logo.style.opacity = AppState.globalLogo.opacity;
         const l = AppState.globalLogo;
         logo.style.transform = `translate(calc(-50% + ${l.x}px), calc(-50% + ${l.y}px)) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
+        const logoImg = document.createElement('img');
+        logoImg.src = AppState.globalLogo.image;
+        logoImg.alt = '';
+        logo.appendChild(logoImg);
         cardEl.appendChild(logo);
     }
 
@@ -157,11 +160,14 @@ function createCardElement(card) {
         const cardLogoEl = document.createElement('div');
         cardLogoEl.className = 'card-logo-individual';
         cardLogoEl.dataset.layer = 'cardLogo';
-        cardLogoEl.style.backgroundImage = `url(${cl.image})`;
         cardLogoEl.style.opacity = (cl.opacity !== undefined) ? cl.opacity : 1;
         const sX = (cl.stretchX !== undefined) ? cl.stretchX : 1;
         const sY = (cl.stretchY !== undefined) ? cl.stretchY : 1;
         cardLogoEl.style.transform = `translate(calc(-50% + ${cl.x}px), calc(-50% + ${cl.y}px)) scale(${cl.scale * sX}, ${cl.scale * sY})`;
+        const cardLogoImg = document.createElement('img');
+        cardLogoImg.src = cl.image;
+        cardLogoImg.alt = '';
+        cardLogoEl.appendChild(cardLogoImg);
         cardEl.appendChild(cardLogoEl);
     }
 
