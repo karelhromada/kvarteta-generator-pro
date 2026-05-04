@@ -46,6 +46,12 @@
             <button id="btn-bulk-import" class="action-btn primary" title="Hromadný import obrázků + CSV (pouze pro Kvarteta)" style="display:none; background-color:#3b82f6; border:none;" onclick="openBulkImportDialog()">
                 📦 Hromadný import
             </button>
+            <label class="action-btn primary" title="Načíst hotovou sadu z adresáře finalni_karty/" style="cursor:pointer; background-color:#8b5cf6; border:none;">
+                📁 Načíst hotovou sadu
+                <input type="file" id="finished-set-input" webkitdirectory directory multiple
+                       accept="image/png,image/jpeg,image/webp"
+                       style="display:none;" onchange="loadFinishedSet(event)">
+            </label>
             <button class="action-btn primary" onclick="exportProject()">⭳ Uložit Projekt</button>
         </div>
     </nav>
@@ -1449,6 +1455,26 @@
             </div>
         </section>
     </main>
+
+    <!-- Modal: shrnutí načtení hotové sady -->
+    <div id="finished-set-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2>Načtení hotové sady</h2>
+            <div id="finished-set-stats" class="status-line" style="font-size:13px; color:#fff; margin-bottom:10px;"></div>
+            <div id="finished-set-strategy" class="status-line" style="margin-bottom:10px;"></div>
+            <div id="finished-set-warning" class="status-line" style="color:#f87171; margin-bottom:10px; display:none;"></div>
+            <details id="finished-set-unmatched-wrap" style="margin-bottom:10px; display:none;">
+                <summary style="cursor:pointer; color:#fbbf24;">Neumístěné soubory</summary>
+                <ul id="finished-set-unmatched" style="max-height:160px; overflow:auto; margin:8px 0 0 0; padding-left:18px; font-size:12px; color:#cbd5e1;"></ul>
+            </details>
+            <p class="hint" style="margin:6px 0;">
+                Tip: Nyní v sekci <strong>Globální Logo</strong> nahraj logo a ono se zobrazí na všech kartách.
+            </p>
+            <div class="modal-actions">
+                <button class="action-btn primary" onclick="closeFinishedSetSummary()">Zavřít</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal pro hromadný import (Kvarteta) -->
     <div id="bulk-import-modal" class="modal-overlay" style="display:none;">

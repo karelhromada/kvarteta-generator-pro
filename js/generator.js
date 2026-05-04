@@ -1770,3 +1770,298 @@ async function performBulkImport() {
         if (runBtn) runBtn.disabled = false;
     }
 }
+
+// =====================================================================
+// Načítání hotových sad z adresáře finalni_karty/ (všechny režimy)
+// =====================================================================
+
+const FINISHED_SET_VALUE_MAP = {
+    '7': '7', 'sedm': '7', 'sedmicka': '7',
+    '8': '8', 'osm': '8', 'osmicka': '8',
+    '9': '9', 'devet': '9', 'devitka': '9',
+    '10': '10', 'deset': '10', 'desitka': '10',
+    'spodek': 'Spodek', 'kluk': 'Spodek', 'jack': 'Spodek',
+    'svrsek': 'Svršek', 'kralovna': 'Svršek', 'queen': 'Svršek', 'dama': 'Svršek',
+    'kral': 'Král', 'king': 'Král',
+    'eso': 'Eso', 'ace': 'Eso'
+};
+
+const FINISHED_SET_SUIT_MAP = {
+    'cervene': 'Červené', 'srdce': 'Červené', 'srdcove': 'Červené', 'hearts': 'Červené',
+    'zelene': 'Zelené', 'listy': 'Zelené', 'leaves': 'Zelené', 'spades': 'Zelené',
+    'kule': 'Kule', 'kary': 'Kule', 'koule': 'Kule', 'diamonds': 'Kule', 'bells': 'Kule',
+    'zaludy': 'Žaludy', 'zalude': 'Žaludy', 'acorns': 'Žaludy', 'clubs': 'Žaludy'
+};
+
+function naturalSort(a, b) {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function stripDiacritics(s) {
+    return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function tokenizeName(baseName) {
+    return stripDiacritics(baseName.toLowerCase())
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean);
+}
+
+async function loadFinishedSet(event) {
+    const input = event.target;
+    const files = Array.from(input.files || [])
+        .filter(f => /\.(png|jpe?g|webp)$/i.test(f.name));
+
+    // Reset, ať jde tatáž složka znovu vybrat
+    input.value = '';
+
+    if (!files.length) {
+        alert('Ve složce nejsou žádné obrázky (PNG/JPEG/WebP).');
+        return;
+    }
+
+    let loaded;
+    try {
+        loaded = await Promise.all(files.map(async f => {
+            // macOS HFS+/APFS dává filenames v NFD; sloty v state.js jsou v NFC.
+            const nfcName = f.name.normalize('NFC');
+            const dataURL = await readFileAsDataURL(f);
+            const dims = await getImageNaturalSize(dataURL);
+            return {
+                name: nfcName,
+                baseName: nfcName.replace(/\.(png|jpe?g|webp)$/i, ''),
+                dataURL,
+                naturalW: dims.w,
+                naturalH: dims.h
+            };
+        }));
+    } catch (e) {
+        console.error('Načtení souborů selhalo', e);
+        alert('Některé soubory se nepodařilo načíst: ' + (e.message || e));
+        return;
+    }
+
+    // Hotová karta = celý design je už zapečen v obrázku.
+    // Vypneme dynamické symboly (jinak by se kreslily přes obrázek)
+    // a u kvarteta i statový overlay.
+    AppState.showSymbols = false;
+    if (AppState.quartetSettings) {
+        AppState.quartetSettings.hideStats = true;
+    }
+
+    const result = assignImagesToCards(loaded, AppState.gameMode);
+
+    // Slot v UI px = cardWidth_mm * scaleUi (3.8 v createCardElement).
+    const SCALE_UI = 3.8;
+    const slotW = AppState.cardWidth  * SCALE_UI;
+    const slotH = AppState.cardHeight * SCALE_UI;
+
+    result.assignments.forEach(({ cardId, item }) => {
+        const card = AppState.cards.find(c => c.id === cardId);
+        if (!card) return;
+        card.image = item.dataURL;
+
+        // Auto-fit "fill": vyplní celý slot. Pokud poměr stran sedí (typicky
+        // ano u finalni_karty), výsledek je pixel-perfect bez deformace.
+        // Jinak se nepatrně roztáhne — uživatel vidí kompletní hotový design.
+        const fitX = (item.naturalW > 0) ? slotW / item.naturalW : 1;
+        const fitY = (item.naturalH > 0) ? slotH / item.naturalH : 1;
+        const baseScale = Math.min(fitX, fitY);
+        card.crop = {
+            x: 0,
+            y: 0,
+            scale: baseScale,
+            stretchX: (baseScale > 0) ? fitX / baseScale : 1,
+            stretchY: (baseScale > 0) ? fitY / baseScale : 1
+        };
+    });
+
+    let storageWarning = '';
+    try {
+        saveState();
+    } catch (e) {
+        console.error('saveState failed', e);
+        storageWarning = '⚠️ Autosave selhal (limit localStorage). Exportujte projekt přes "Uložit Projekt".';
+    }
+    renderUIFromState();
+
+    showFinishedSetSummary({
+        total: loaded.length,
+        matched: result.assignments.length,
+        unmatched: result.unmatched,
+        strategy: result.strategy
+    }, storageWarning);
+}
+
+function getImageNaturalSize(dataURL) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => resolve({ w: 0, h: 0 });
+        img.src = dataURL;
+    });
+}
+
+function assignImagesToCards(loaded, mode) {
+    if (mode === 'playing_cards') return assignPlayingCards(loaded);
+    if (mode === 'quartet')       return assignQuartet(loaded);
+    if (mode === 'pexeso')        return assignPexeso(loaded);
+    return { assignments: [], unmatched: loaded.map(l => l.name), strategy: 'neznámý režim' };
+}
+
+function assignPlayingCards(loaded) {
+    const assignments = [];
+    const unmatched = [];
+    const usedSlots = new Set();
+    const cardIds = new Set(AppState.cards.map(c => c.id));
+
+    let directHits = 0;
+    let translatedHits = 0;
+    const remaining = [];
+
+    // 1) Přímý ID match (např. "Červené_7")
+    for (const item of loaded) {
+        if (cardIds.has(item.baseName) && !usedSlots.has(item.baseName)) {
+            assignments.push({ cardId: item.baseName, item });
+            usedSlots.add(item.baseName);
+            directHits++;
+        } else {
+            remaining.push(item);
+        }
+    }
+
+    // 2) Český překlad: hledáme value+suit token v libovolném pořadí
+    const stillRemaining = [];
+    for (const item of remaining) {
+        const tokens = tokenizeName(item.baseName);
+        let matchedValue = null;
+        let matchedSuit = null;
+        for (const t of tokens) {
+            if (!matchedValue && FINISHED_SET_VALUE_MAP[t]) matchedValue = FINISHED_SET_VALUE_MAP[t];
+            if (!matchedSuit  && FINISHED_SET_SUIT_MAP[t])  matchedSuit  = FINISHED_SET_SUIT_MAP[t];
+        }
+        if (matchedValue && matchedSuit) {
+            const id = `${matchedSuit}_${matchedValue}`;
+            if (cardIds.has(id) && !usedSlots.has(id)) {
+                assignments.push({ cardId: id, item });
+                usedSlots.add(id);
+                translatedHits++;
+                continue;
+            }
+        }
+        stillRemaining.push(item);
+    }
+
+    // 3) Abecední fallback do volných slotů
+    let orderHits = 0;
+    if (stillRemaining.length) {
+        stillRemaining.sort((a, b) => naturalSort(a.baseName, b.baseName));
+        const freeSlots = AppState.cards.filter(c => !usedSlots.has(c.id));
+        let i = 0;
+        for (const item of stillRemaining) {
+            if (i >= freeSlots.length) {
+                unmatched.push(item.name);
+                continue;
+            }
+            assignments.push({ cardId: freeSlots[i].id, item });
+            usedSlots.add(freeSlots[i].id);
+            i++;
+            orderHits++;
+        }
+    }
+
+    const parts = [];
+    if (directHits)     parts.push(`${directHits}× přímý ID match`);
+    if (translatedHits) parts.push(`${translatedHits}× český překlad`);
+    if (orderHits)      parts.push(`${orderHits}× abecední fallback`);
+    return { assignments, unmatched, strategy: parts.join(' + ') || 'žádný match' };
+}
+
+function assignQuartet(loaded) {
+    const sorted = [...loaded].sort((a, b) => naturalSort(a.baseName, b.baseName));
+    const assignments = [];
+    const unmatched = [];
+    const slotIds = AppState.cards.map(c => c.id); // očekáváme q_1A..q_8D v tomto pořadí
+
+    sorted.forEach((item, idx) => {
+        if (idx < slotIds.length) {
+            assignments.push({ cardId: slotIds[idx], item });
+        } else {
+            unmatched.push(item.name);
+        }
+    });
+
+    return {
+        assignments,
+        unmatched,
+        strategy: `abecední pořadí → ${assignments.length}/${slotIds.length} slotů`
+    };
+}
+
+function assignPexeso(loaded) {
+    const sorted = [...loaded].sort((a, b) => naturalSort(a.baseName, b.baseName));
+
+    // Auto-resize: nastavíme počet a re-init slotů.
+    if (sorted.length !== AppState.cards.length) {
+        AppState.pexesoCount = sorted.length;
+        initCardsByMode('pexeso'); // přepíše AppState.cards na pex_1..pex_N
+    }
+
+    const assignments = [];
+    const slotIds = AppState.cards.map(c => c.id);
+    sorted.forEach((item, idx) => {
+        if (idx < slotIds.length) {
+            assignments.push({ cardId: slotIds[idx], item });
+        }
+    });
+
+    return {
+        assignments,
+        unmatched: [],
+        strategy: `pexeso auto-resize → ${assignments.length} slotů`
+    };
+}
+
+function showFinishedSetSummary(info, storageWarning) {
+    const modal = document.getElementById('finished-set-modal');
+    const stats = document.getElementById('finished-set-stats');
+    const strategy = document.getElementById('finished-set-strategy');
+    const warning = document.getElementById('finished-set-warning');
+    const wrap = document.getElementById('finished-set-unmatched-wrap');
+    const list = document.getElementById('finished-set-unmatched');
+    if (!modal) return;
+
+    if (stats) stats.textContent = `Načteno ${info.matched}/${info.total} obrázků do slotů.`;
+    if (strategy) strategy.textContent = `Strategie: ${info.strategy}`;
+
+    if (warning) {
+        if (storageWarning) {
+            warning.textContent = storageWarning;
+            warning.style.display = 'block';
+        } else {
+            warning.style.display = 'none';
+            warning.textContent = '';
+        }
+    }
+
+    if (wrap && list) {
+        list.innerHTML = '';
+        if (info.unmatched && info.unmatched.length) {
+            info.unmatched.forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                list.appendChild(li);
+            });
+            wrap.style.display = 'block';
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeFinishedSetSummary() {
+    const modal = document.getElementById('finished-set-modal');
+    if (modal) modal.style.display = 'none';
+}
