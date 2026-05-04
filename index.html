@@ -9,7 +9,9 @@
     <link rel="stylesheet" href="css/editor.css">
     
     <!-- Písma -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@300;400;700;900&family=Oswald:wght@400;700&family=Montserrat:wght@400;600;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Roboto:wght@300;400;700;900&family=Oswald:wght@400;700&family=Montserrat:wght@400;600;800&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=MedievalSharp&family=UnifrakturMaguntia&family=UnifrakturCook:wght@700&family=Pirata+One&family=Almendra+SC&family=Almendra+Display&family=IM+Fell+English+SC&family=IM+Fell+DW+Pica+SC&family=Berkshire+Swash&family=Henny+Penny&family=Macondo&family=Lobster&family=Pacifico&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Tangerine:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Bilbo+Swash+Caps&display=swap" rel="stylesheet">
     
     <!-- Knihovny pro Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1160,15 +1162,41 @@
                             <div class="control-group">
                                 <label>Font</label>
                                 <select id="ind-text-font" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" onchange="updateCardText('font', this.value)">
-                                    <option value="'Cinzel', serif">Cinzel</option>
-                                    <option value="'Playfair Display', serif">Playfair Display</option>
-                                    <option value="'Oswald', sans-serif">Oswald</option>
-                                    <option value="'Montserrat', sans-serif">Montserrat</option>
-                                    <option value="'Roboto', sans-serif">Roboto</option>
-                                    <option value="'Inter', sans-serif">Inter</option>
-                                    <option value="serif">Serif (system)</option>
-                                    <option value="sans-serif">Sans-serif (system)</option>
-                                    <option value="monospace">Monospace</option>
+                                    <optgroup label="Zdobené / pohádkové">
+                                        <option value="'UnifrakturMaguntia', serif" style="font-family:'UnifrakturMaguntia', serif;">UnifrakturMaguntia (gotika)</option>
+                                        <option value="'UnifrakturCook', serif" style="font-family:'UnifrakturCook', serif; font-weight:700;">UnifrakturCook (těžká gotika)</option>
+                                        <option value="'MedievalSharp', cursive" style="font-family:'MedievalSharp', cursive;">MedievalSharp (středověk)</option>
+                                        <option value="'Pirata One', cursive" style="font-family:'Pirata One', cursive;">Pirata One (pirátské)</option>
+                                        <option value="'Cinzel Decorative', serif" style="font-family:'Cinzel Decorative', serif;">Cinzel Decorative</option>
+                                        <option value="'Almendra Display', serif" style="font-family:'Almendra Display', serif;">Almendra Display</option>
+                                        <option value="'Almendra SC', serif" style="font-family:'Almendra SC', serif;">Almendra SC (kapitálky)</option>
+                                        <option value="'IM Fell English SC', serif" style="font-family:'IM Fell English SC', serif;">IM Fell English SC (stará kniha)</option>
+                                        <option value="'IM Fell DW Pica SC', serif" style="font-family:'IM Fell DW Pica SC', serif;">IM Fell DW Pica SC</option>
+                                        <option value="'Henny Penny', cursive" style="font-family:'Henny Penny', cursive;">Henny Penny (pohádka)</option>
+                                        <option value="'Macondo', cursive" style="font-family:'Macondo', cursive;">Macondo (pohádka)</option>
+                                        <option value="'Berkshire Swash', cursive" style="font-family:'Berkshire Swash', cursive;">Berkshire Swash</option>
+                                        <option value="'Bilbo Swash Caps', cursive" style="font-family:'Bilbo Swash Caps', cursive;">Bilbo Swash Caps</option>
+                                        <option value="'Tangerine', cursive" style="font-family:'Tangerine', cursive;">Tangerine</option>
+                                        <option value="'Great Vibes', cursive" style="font-family:'Great Vibes', cursive;">Great Vibes</option>
+                                        <option value="'Dancing Script', cursive" style="font-family:'Dancing Script', cursive;">Dancing Script</option>
+                                        <option value="'Lobster', cursive" style="font-family:'Lobster', cursive;">Lobster</option>
+                                        <option value="'Pacifico', cursive" style="font-family:'Pacifico', cursive;">Pacifico</option>
+                                    </optgroup>
+                                    <optgroup label="Klasické">
+                                        <option value="'Cinzel', serif" style="font-family:'Cinzel', serif;">Cinzel</option>
+                                        <option value="'Playfair Display', serif" style="font-family:'Playfair Display', serif;">Playfair Display</option>
+                                        <option value="'EB Garamond', serif" style="font-family:'EB Garamond', serif;">EB Garamond</option>
+                                        <option value="'Cormorant Garamond', serif" style="font-family:'Cormorant Garamond', serif;">Cormorant Garamond</option>
+                                        <option value="'Oswald', sans-serif" style="font-family:'Oswald', sans-serif;">Oswald</option>
+                                        <option value="'Montserrat', sans-serif" style="font-family:'Montserrat', sans-serif;">Montserrat</option>
+                                        <option value="'Roboto', sans-serif" style="font-family:'Roboto', sans-serif;">Roboto</option>
+                                        <option value="'Inter', sans-serif" style="font-family:'Inter', sans-serif;">Inter</option>
+                                    </optgroup>
+                                    <optgroup label="Systémové">
+                                        <option value="serif">Serif (system)</option>
+                                        <option value="sans-serif">Sans-serif (system)</option>
+                                        <option value="monospace">Monospace</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="control-row">

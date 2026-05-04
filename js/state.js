@@ -47,8 +47,9 @@ let AppState = {
     },
     
     // Globální nastavení rozměrů (pro všechny karty stejné)
+    // Default je pro režim 'playing_cards' (63×105). Při změně režimu se přepne dle MODE_CARD_SIZES.
     cardWidth: 63,
-    cardHeight: 88,
+    cardHeight: 105,
     cardRadius: 4,
     
     // Globální vrstva (Vrstva 2) - společná pro všechny karty
@@ -144,10 +145,23 @@ let AppState = {
 
 // --- INICIALIZACE SADY ---
 
+// Předvolené rozměry karet podle režimu (mm)
+const MODE_CARD_SIZES = {
+    'playing_cards': { width: 63, height: 105 },
+    'quartet':       { width: 65, height: 95 },
+    'pexeso':        { width: 63, height: 88 }
+};
+
 function initCardsByMode(mode) {
+    // Pokud uživatel mění režim (ne pouhý reload), přepneme i rozměry karet
+    const prevMode = AppState.gameMode;
     AppState.gameMode = mode;
+    if (prevMode !== mode && MODE_CARD_SIZES[mode]) {
+        AppState.cardWidth  = MODE_CARD_SIZES[mode].width;
+        AppState.cardHeight = MODE_CARD_SIZES[mode].height;
+    }
     AppState.cards = [];
-    
+
     if (mode === 'playing_cards') {
         const suits = ['Červené', 'Zelené', 'Kule', 'Žaludy'];
         const values = ['7', '8', '9', '10', 'Spodek', 'Svršek', 'Král', 'Eso'];
