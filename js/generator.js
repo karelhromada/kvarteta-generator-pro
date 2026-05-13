@@ -442,6 +442,11 @@ function drawSymbols(cardEl, card) {
 }
 
 function drawQuartetOverlay(cardEl, card) {
+    // Hotová sada (loadFinishedSet) zapne hideOverlay — obrázek karty
+    // už obsahuje gradient, ID, jméno, popis i statistiky. Nesmí se přes
+    // něj kreslit nic dalšího (zejména .kvarteta-overlay-bottom s 60% inset
+    // shadowem ztmavil spodní třetinu hotových karet).
+    if (AppState.quartetSettings && AppState.quartetSettings.hideOverlay) return;
     const data = card.quartetData || { name: "", description: "", stats: ["", "", "", ""] };
     const parts = card.id.split('_'); // e.g. 'q_1A'
     const subStr = parts.length > 1 ? parts[1] : '1A';
@@ -2012,6 +2017,7 @@ async function loadFinishedSet(event) {
     AppState.showSymbols = false;
     if (AppState.quartetSettings) {
         AppState.quartetSettings.hideStats = true;
+        AppState.quartetSettings.hideOverlay = true;
     }
     if (AppState.globalOverlay) {
         AppState.globalOverlay.image = null;
