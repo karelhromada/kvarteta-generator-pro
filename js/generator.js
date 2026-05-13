@@ -43,6 +43,59 @@ function isFigureCard(card) {
     return FIGURE_VALUES.includes(normalizedSuit(val));
 }
 
+// Tolerantní lookup barvy textu po suit jménu (řeší macOS NFD/NFC).
+function getSuitTextColor(name) {
+    if (!name || !AppState.textSuitColors) return null;
+    const normName = normalizedSuit(name);
+    if (AppState.textSuitColors[normName] != null) return AppState.textSuitColors[normName];
+    for (const key in AppState.textSuitColors) {
+        if (normalizedSuit(key) === normName && AppState.textSuitColors[key] != null) {
+            return AppState.textSuitColors[key];
+        }
+    }
+    return null;
+}
+
+// Vrací efektivní text config karty (sloučení globál → suit barva → per-karta override)
+// nebo null pokud se text nemá vykreslit.
+function resolveCardText(card) {
+    if (!card) return null;
+    const parts = card.id.split('_');
+    const suit = parts[0];
+    const val  = parts[1];
+
+    const globalForValue = (AppState.gameMode === 'playing_cards' && AppState.textValueSettings)
+        ? AppState.textValueSettings[normalizedSuit(val)] : null;
+
+    const override = card.textOverlay; // sparse: jen ručně změněné klíče; null = bez override
+    const overrideActive = override != null; // toggle „Lokální přepis" je zapnutý
+    const globalEnabled = globalForValue && globalForValue.enabled;
+
+    if (!globalEnabled && !overrideActive) return null;
+
+    // Sestavíme efektivní config. Pokud globál existuje, použij ho jako základ;
+    // jinak fallback default (umožní text i mimo playing_cards skrz override).
+    const base = globalForValue || {
+        text: '', font: "'Tangerine', cursive", size: 25, color: '#ffffff',
+        bold: true, italic: false, x: 0, y: -158, align: 'center'
+    };
+    let cfg = { ...base };
+
+    // Per-suit barva (jen pokud platí globál pro tuto hodnotu)
+    if (globalEnabled) {
+        const suitColor = getSuitTextColor(suit);
+        if (suitColor) cfg.color = suitColor;
+    }
+
+    // Per-karta override (má nejvyšší prioritu)
+    if (override) {
+        cfg = { ...cfg, ...override };
+    }
+
+    if (!cfg.text) return null;
+    return cfg;
+}
+
 // Bezpečné získání nastavení barvy (suit) - nezávislé na kódování klíčů
 function getSuitConfig(name) {
     if (!name) return null;
@@ -214,9 +267,10 @@ function createCardElement(card) {
         drawSymbols(cardEl, card);
     }
 
-    // VRSTVA 4.5: PER-CARD TEXT (jen na figurách: Eso/Král/Svršek/Spodek)
-    if (card.textOverlay && card.textOverlay.text && isFigureCard(card)) {
-        const t = card.textOverlay;
+    // VRSTVA 4.5: TEXT (globál po hodnotě + per-suit barva + per-karta override).
+    // Dostupné na všech kartách, ne jen figurách.
+    const t = resolveCardText(card);
+    if (t) {
         const txt = document.createElement('div');
         txt.className = 'card-text-overlay';
         txt.dataset.layer = 'textOverlay';
@@ -1019,31 +1073,21 @@ function resetIndividualImage() {
     }
 }
 
-// ===== PER-CARD TEXT (jen na figurách) ===== //
+// ===== TEXT NA KARTĚ ===== //
+// Model: globál po hodnotě (AppState.textValueSettings) + per-suit barva
+// (AppState.textSuitColors) + per-karta sparse override (card.textOverlay).
+// Sparse override znamená, že card.textOverlay drží JEN klíče, které uživatel
+// explicitně přepsal — chybějící se přebírají z globálu. Díky tomu změna
+// globálního Y propíše i na karty, které si Y neoverridovaly.
 
-function defaultTextOverlay(card) {
-    return {
-        text: card.label || '',
-        font: "'Cinzel', serif",
-        size: 18,
-        color: '#ffffff',
-        bold: true,
-        italic: false,
-        x: 0,
-        y: 0,
-        align: 'center'
-    };
-}
-
+// Zapnout/vypnout per-karta override. Prázdný objekt = "mám vlastní text,
+// ale zatím nic neoverriduji" → resolver vrátí null jen pokud i globál
+// neaktivní (jinak globál vykreslí).
 function toggleCardText(enabled) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (!card) return;
-    if (enabled) {
-        if (!card.textOverlay) card.textOverlay = defaultTextOverlay(card);
-    } else {
-        card.textOverlay = null;
-    }
+    card.textOverlay = enabled ? (card.textOverlay || {}) : null;
     debouncedSaveState();
     renderUIFromState();
 }
@@ -1052,7 +1096,7 @@ function updateCardText(param, value) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (!card) return;
-    if (!card.textOverlay) card.textOverlay = defaultTextOverlay(card);
+    if (!card.textOverlay) card.textOverlay = {};
 
     if (param === 'text' || param === 'font' || param === 'color' || param === 'align') {
         card.textOverlay[param] = value;
@@ -1065,11 +1109,44 @@ function updateCardText(param, value) {
     requestCardRender(card.id);
 }
 
+// Smaže per-karta override (karta se vrátí k čistému globálu).
 function resetCardText() {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (!card) return;
     card.textOverlay = null;
+    debouncedSaveState();
+    renderUIFromState();
+}
+
+// ===== GLOBÁLNÍ TEXT PO HODNOTĚ ===== //
+
+function updateValueText(valueKey, param, value) {
+    const vs = AppState.textValueSettings && AppState.textValueSettings[valueKey];
+    if (!vs) return;
+    if (param === 'enabled' || param === 'bold' || param === 'italic') {
+        vs[param] = !!value;
+    } else if (param === 'size' || param === 'x' || param === 'y') {
+        vs[param] = parseFloat(value) || 0;
+    } else if (param === 'text' || param === 'font' || param === 'color' || param === 'align') {
+        vs[param] = value;
+    }
+    debouncedSaveState();
+    requestRender();
+}
+
+function updateSuitTextColor(suit, color) {
+    if (!AppState.textSuitColors) return;
+    const norm = normalizedSuit(suit);
+    AppState.textSuitColors[norm] = color || null; // prázdný řetězec = null
+    debouncedSaveState();
+    requestRender();
+}
+
+function clearSuitTextColor(suit) {
+    if (!AppState.textSuitColors) return;
+    const norm = normalizedSuit(suit);
+    AppState.textSuitColors[norm] = null;
     debouncedSaveState();
     renderUIFromState();
 }
@@ -1299,30 +1376,37 @@ function renderUIFromState() {
                 }
             }
 
-            // Sync sekce VLASTNÍ TEXT — viditelná jen pro figury (Eso/Král/Svršek/Spodek)
+            // Sync sekce VLASTNÍ TEXT (per-karta override) — viditelná na všech kartách.
+            // Hodnoty v polích zobrazujeme jako EFEKTIVNÍ (globál → suit barva → override),
+            // aby uživatel viděl, co reálně na kartě je, i když nemá lokální override.
             const textSection = document.getElementById('individual-text-section');
             if (textSection) {
-                const isFigure = isFigureCard(card);
-                textSection.style.display = isFigure ? 'block' : 'none';
-                if (isFigure) {
-                    const enabled = !!card.textOverlay;
-                    setChecked('ind-text-enabled', enabled);
-                    const textCtrls = document.getElementById('ind-text-controls');
-                    if (textCtrls) {
-                        textCtrls.style.opacity = enabled ? 1 : 0.4;
-                        textCtrls.style.pointerEvents = enabled ? 'auto' : 'none';
-                    }
-                    const t = card.textOverlay || defaultTextOverlay(card);
-                    setVal('ind-text-content', t.text);
-                    setVal('ind-text-font', t.font);
-                    setVal('ind-text-size', t.size);
-                    setVal('ind-text-color', t.color);
-                    setChecked('ind-text-bold', !!t.bold);
-                    setChecked('ind-text-italic', !!t.italic);
-                    setVal('ind-text-align', t.align);
-                    setVal('ind-text-x', t.x);
-                    setVal('ind-text-y', t.y);
+                textSection.style.display = 'block';
+                const enabled = !!card.textOverlay; // má per-karta override?
+                setChecked('ind-text-enabled', enabled);
+                const textCtrls = document.getElementById('ind-text-controls');
+                if (textCtrls) {
+                    textCtrls.style.opacity = enabled ? 1 : 0.55;
+                    textCtrls.style.pointerEvents = enabled ? 'auto' : 'none';
                 }
+                // Vždy zobrazíme efektivní hodnoty (fallback na globál pro hodnotu, jinak default).
+                const effective = resolveCardText(card) || (() => {
+                    const valKey = normalizedSuit(card.id.split('_')[1]);
+                    const g = AppState.textValueSettings && AppState.textValueSettings[valKey];
+                    return g ? { ...g } : {
+                        text: '', font: "'Tangerine', cursive", size: 25, color: '#ffffff',
+                        bold: true, italic: false, x: 0, y: -158, align: 'center'
+                    };
+                })();
+                setVal('ind-text-content', effective.text || '');
+                setVal('ind-text-font', effective.font || "'Tangerine', cursive");
+                setVal('ind-text-size', effective.size);
+                setVal('ind-text-color', effective.color || '#ffffff');
+                setChecked('ind-text-bold', !!effective.bold);
+                setChecked('ind-text-italic', !!effective.italic);
+                setVal('ind-text-align', effective.align || 'center');
+                setVal('ind-text-x', effective.x || 0);
+                setVal('ind-text-y', effective.y || 0);
             }
 
             // Sync sekce LOGO KARTY — viditelná u všech karet
@@ -1382,6 +1466,81 @@ function renderUIFromState() {
         updateQuartetGroupColorUI();
     }
 
+    // 9. GLOBÁLNÍ TEXT PO HODNOTĚ (jen pro režim hracích karet, jinak panel skrýt)
+    syncTextValuePanel(setVal, setChecked);
+    syncSuitTextColorPanel(setVal);
+
+    requestRender();
+}
+
+// Synchronizace panelu „GLOBÁLNÍ TEXT PO HODNOTĚ".
+// Edituje se vždy jedna vybraná hodnota (Eso/Král/Svršek/Spodek) podle
+// `#text-value-select`. Změny se promítnou do AppState.textValueSettings[value].
+function syncTextValuePanel(setVal, setChecked) {
+    const panel = document.getElementById('text-value-panel');
+    if (!panel) return;
+    panel.style.display = (AppState.gameMode === 'playing_cards') ? 'block' : 'none';
+
+    const select = document.getElementById('text-value-select');
+    if (!select || !AppState.textValueSettings) return;
+    const selected = select.value || 'Eso';
+    const cfg = AppState.textValueSettings[selected];
+    if (!cfg) return;
+
+    setChecked('text-value-enabled', !!cfg.enabled);
+    setVal('text-value-content', cfg.text || '');
+    setVal('text-value-font', cfg.font || "'Tangerine', cursive");
+    setVal('text-value-size', cfg.size != null ? cfg.size : 25);
+    setVal('text-value-color', cfg.color || '#ffffff');
+    setChecked('text-value-bold', !!cfg.bold);
+    setChecked('text-value-italic', !!cfg.italic);
+    setVal('text-value-align', cfg.align || 'center');
+    setVal('text-value-x', cfg.x != null ? cfg.x : 0);
+    setVal('text-value-y', cfg.y != null ? cfg.y : -158);
+}
+
+// Synchronizace 4 color pickerů „BARVA TEXTU PO BARVĚ".
+function syncSuitTextColorPanel(setVal) {
+    const panel = document.getElementById('text-suit-color-panel');
+    if (!panel) return;
+    panel.style.display = (AppState.gameMode === 'playing_cards') ? 'block' : 'none';
+    if (!AppState.textSuitColors) return;
+    const map = { 'Červené': 'text-suit-color-cervene', 'Zelené': 'text-suit-color-zelene', 'Kule': 'text-suit-color-kule', 'Žaludy': 'text-suit-color-zaludy' };
+    Object.entries(map).forEach(([suit, id]) => {
+        const v = AppState.textSuitColors[suit];
+        // Color picker neumí null → zobrazíme bílou jako vizuální fallback,
+        // ale interně si pamatujeme null (žádný override).
+        setVal(id, v || '#ffffff');
+        const chk = document.getElementById(id + '-enabled');
+        if (chk) chk.checked = !!v;
+    });
+}
+
+// Obsluha přepínače „aktivní hodnoty" v globálním panelu (volá HTML onchange).
+function switchTextValueTarget() {
+    renderUIFromState();
+}
+
+// Helper pro HTML — edituje právě vybranou hodnotu (Eso/Král/Svršek/Spodek).
+function updateSelectedValueText(param, value) {
+    const select = document.getElementById('text-value-select');
+    const key = select ? select.value : 'Eso';
+    updateValueText(key, param, value);
+}
+
+// Helper pro per-suit barvy z HTML — řeší zapnutí/vypnutí (null = bez override).
+function toggleSuitTextColor(suit, enabled) {
+    if (!AppState.textSuitColors) return;
+    const norm = normalizedSuit(suit);
+    if (!enabled) {
+        AppState.textSuitColors[norm] = null;
+    } else {
+        // Při zapnutí převezmeme aktuální hodnotu z pickeru (HTML element).
+        const map = { 'Červené': 'text-suit-color-cervene', 'Zelené': 'text-suit-color-zelene', 'Kule': 'text-suit-color-kule', 'Žaludy': 'text-suit-color-zaludy' };
+        const el = document.getElementById(map[norm]);
+        AppState.textSuitColors[norm] = (el && el.value) ? el.value : '#ffffff';
+    }
+    debouncedSaveState();
     requestRender();
 }
 

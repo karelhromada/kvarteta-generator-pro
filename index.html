@@ -1011,6 +1011,148 @@
                 </div>
             </div>
 
+            <!-- Globální text po hodnotě karty (Eso/Král/Svršek/Spodek) -->
+            <div class="panel-section" id="text-value-panel">
+                <h3>Globální Text (Dle Hodnoty)</h3>
+                <div class="control-row" style="margin-bottom: 12px;">
+                    <label>Hodnota</label>
+                    <select id="text-value-select" class="dropdown" onchange="switchTextValueTarget()">
+                        <option value="Eso">Esa (A)</option>
+                        <option value="Král">Král (K)</option>
+                        <option value="Svršek">Svršek (Q)</option>
+                        <option value="Spodek">Spodek (J)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Zapnout text</label>
+                    <input type="checkbox" id="text-value-enabled" onchange="updateSelectedValueText('enabled', this.checked)">
+                </div>
+                <div class="control-group">
+                    <label>Obsah</label>
+                    <input type="text" id="text-value-content" maxlength="8" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px; font-size:13px;" oninput="updateSelectedValueText('text', this.value)">
+                </div>
+                <div class="control-group">
+                    <label>Font</label>
+                    <select id="text-value-font" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" onchange="updateSelectedValueText('font', this.value)">
+                        <optgroup label="Zdobené / pohádkové">
+                            <option value="'UnifrakturMaguntia', serif">UnifrakturMaguntia (gotika)</option>
+                            <option value="'UnifrakturCook', serif">UnifrakturCook (těžká gotika)</option>
+                            <option value="'MedievalSharp', cursive">MedievalSharp</option>
+                            <option value="'Pirata One', cursive">Pirata One</option>
+                            <option value="'Cinzel Decorative', serif">Cinzel Decorative</option>
+                            <option value="'Almendra Display', serif">Almendra Display</option>
+                            <option value="'Almendra SC', serif">Almendra SC</option>
+                            <option value="'IM Fell English SC', serif">IM Fell English SC</option>
+                            <option value="'IM Fell DW Pica SC', serif">IM Fell DW Pica SC</option>
+                            <option value="'Henny Penny', cursive">Henny Penny</option>
+                            <option value="'Macondo', cursive">Macondo</option>
+                            <option value="'Berkshire Swash', cursive">Berkshire Swash</option>
+                            <option value="'Bilbo Swash Caps', cursive">Bilbo Swash Caps</option>
+                            <option value="'Tangerine', cursive">Tangerine</option>
+                            <option value="'Great Vibes', cursive">Great Vibes</option>
+                            <option value="'Dancing Script', cursive">Dancing Script</option>
+                            <option value="'Lobster', cursive">Lobster</option>
+                            <option value="'Pacifico', cursive">Pacifico</option>
+                        </optgroup>
+                        <optgroup label="Klasické">
+                            <option value="'Cinzel', serif">Cinzel</option>
+                            <option value="'Playfair Display', serif">Playfair Display</option>
+                            <option value="'EB Garamond', serif">EB Garamond</option>
+                            <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+                            <option value="'Oswald', sans-serif">Oswald</option>
+                            <option value="'Montserrat', sans-serif">Montserrat</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="'Inter', sans-serif">Inter</option>
+                        </optgroup>
+                        <optgroup label="Systémové">
+                            <option value="serif">Serif</option>
+                            <option value="sans-serif">Sans-serif</option>
+                            <option value="monospace">Monospace</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost (px)</label>
+                        <span class="value-badge" id="val-text-value-size">25px</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <button class="step-btn" onclick="adjustSlider('text-value-size', -1)">-</button>
+                        <input type="range" id="text-value-size" min="6" max="80" value="25" step="1" oninput="updateSelectedValueText('size', this.value); updateValueBadge(this.id, this.value)">
+                        <button class="step-btn" onclick="adjustSlider('text-value-size', 1)">+</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Výchozí barva</label>
+                    <input type="color" id="text-value-color" value="#ffffff" style="width:60px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateSelectedValueText('color', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Tučně</label>
+                    <input type="checkbox" id="text-value-bold" onchange="updateSelectedValueText('bold', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label>Kurzíva</label>
+                    <input type="checkbox" id="text-value-italic" onchange="updateSelectedValueText('italic', this.checked)">
+                </div>
+                <div class="control-group">
+                    <label>Zarovnání</label>
+                    <select id="text-value-align" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" onchange="updateSelectedValueText('align', this.value)">
+                        <option value="center">Střed</option>
+                        <option value="left">Vlevo</option>
+                        <option value="right">Vpravo</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Posun X (px)</label>
+                        <span class="value-badge" id="val-text-value-x">0px</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <button class="step-btn" onclick="adjustSlider('text-value-x', -1)">-</button>
+                        <input type="range" id="text-value-x" min="-200" max="200" value="0" step="1" oninput="updateSelectedValueText('x', this.value); updateValueBadge(this.id, this.value)">
+                        <button class="step-btn" onclick="adjustSlider('text-value-x', 1)">+</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Posun Y (px)</label>
+                        <span class="value-badge" id="val-text-value-y">-158px</span>
+                    </div>
+                    <div class="slider-stepper">
+                        <button class="step-btn" onclick="adjustSlider('text-value-y', -1)">-</button>
+                        <input type="range" id="text-value-y" min="-300" max="300" value="-158" step="1" oninput="updateSelectedValueText('y', this.value); updateValueBadge(this.id, this.value)">
+                        <button class="step-btn" onclick="adjustSlider('text-value-y', 1)">+</button>
+                    </div>
+                </div>
+                <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Defaulty 25 px / Y −158. Per kartu lze cokoli přepsat v sekci „Vlastní text" v pravém panelu.</p>
+            </div>
+
+            <!-- Globální barva textu po suit (Červené / Zelené / Kule / Žaludy) -->
+            <div class="panel-section" id="text-suit-color-panel">
+                <h3>Barva Textu (Dle Barvy)</h3>
+                <p style="color:#888; font-size:11px; margin:0 0 10px 0; line-height:1.4;">Přepíše barvu globálního textu pro karty dané barvy. Vypnuté = použít výchozí barvu z panelu „Globální Text".</p>
+                <div class="control-row">
+                    <label style="flex:1;">Červené</label>
+                    <input type="color" id="text-suit-color-cervene" value="#ff0000" style="width:50px; height:22px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateSuitTextColor('Červené', this.value)">
+                    <input type="checkbox" id="text-suit-color-cervene-enabled" style="margin-left:6px;" onchange="toggleSuitTextColor('Červené', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label style="flex:1;">Zelené</label>
+                    <input type="color" id="text-suit-color-zelene" value="#22cc22" style="width:50px; height:22px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateSuitTextColor('Zelené', this.value)">
+                    <input type="checkbox" id="text-suit-color-zelene-enabled" style="margin-left:6px;" onchange="toggleSuitTextColor('Zelené', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label style="flex:1;">Kule</label>
+                    <input type="color" id="text-suit-color-kule" value="#8b4513" style="width:50px; height:22px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateSuitTextColor('Kule', this.value)">
+                    <input type="checkbox" id="text-suit-color-kule-enabled" style="margin-left:6px;" onchange="toggleSuitTextColor('Kule', this.checked)">
+                </div>
+                <div class="control-row">
+                    <label style="flex:1;">Žaludy</label>
+                    <input type="color" id="text-suit-color-zaludy" value="#ffbb00" style="width:50px; height:22px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateSuitTextColor('Žaludy', this.value)">
+                    <input type="checkbox" id="text-suit-color-zaludy-enabled" style="margin-left:6px;" onchange="toggleSuitTextColor('Žaludy', this.checked)">
+                </div>
+            </div>
+
             <div id="individual-layout-panel" class="panel-section" style="border: 1px solid var(--accent); display:none;">
                 <h3>Individuální úprava (Aktivní karta)</h3>
                 <div class="control-row" style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
@@ -1153,11 +1295,12 @@
                     </div>
                 </div>
 
-                <!-- Sekce: VLASTNÍ TEXT (jen na figurách: Eso/Král/Svršek/Spodek) -->
-                <div id="individual-text-section" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px; display:none;">
-                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px; letter-spacing:1px;">VLASTNÍ TEXT</h4>
+                <!-- Sekce: VLASTNÍ TEXT (per-karta override; dostupné na všech kartách) -->
+                <div id="individual-text-section" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:12px; letter-spacing:1px;">VLASTNÍ TEXT (PŘEPIS NA KARTĚ)</h4>
+                        <p style="color:#888; font-size:11px; margin:0 0 10px 0; line-height:1.4;">Globál po hodnotě + barva po suit nastavuješ vlevo. Tady jen lokální přepis jednoho pole.</p>
                         <div class="control-row">
-                            <label>Zapnout text</label>
+                            <label>Lokální přepis</label>
                             <input type="checkbox" id="ind-text-enabled" onchange="toggleCardText(this.checked)">
                         </div>
                         <div id="ind-text-controls" style="opacity:0.4; pointer-events:none;">
@@ -1254,10 +1397,10 @@
                                     <button class="step-btn" onclick="adjustSlider('ind-text-y', 1)">+</button>
                                 </div>
                             </div>
-                            <div style="margin-top:10px;">
-                                <button onclick="resetCardText()" class="action-btn minor" style="width:100%; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Smazat text</button>
+                            <div style="margin-top:10px; display:flex; gap:6px;">
+                                <button onclick="resetCardText()" class="action-btn minor" style="flex:1; background:rgba(255,100,100,0.1); color:#ff6b6b; border:1px solid rgba(255,100,100,0.2);">Resetovat na globál</button>
                             </div>
-                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Text můžeš v náhledu chytit a táhnout myší.</p>
+                            <p style="color:#888; font-size:11px; margin-top:8px; line-height:1.4;">Tip: Text můžeš v náhledu chytit a táhnout myší. Reset smaže lokální přepis a karta se vrátí k hodnotám z globálního panelu.</p>
                         </div>
                     </div>
 

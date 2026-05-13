@@ -88,6 +88,23 @@ let AppState = {
         columnX: 0
     },
 
+    // Globální text po hodnotě karty (Eso/Král/Svršek/Spodek) — společné defaulty pro všechny 4 barvy.
+    // Per karta lze přepsat sparse skrz card.textOverlay (jen klíče, které uživatel explicitně změnil).
+    textValueSettings: {
+        'Eso':    { enabled: false, text: 'A', font: "'Tangerine', cursive", size: 25, color: '#ffffff', bold: true, italic: false, x: 0, y: -158, align: 'center' },
+        'Král':   { enabled: false, text: 'K', font: "'Tangerine', cursive", size: 25, color: '#ffffff', bold: true, italic: false, x: 0, y: -158, align: 'center' },
+        'Svršek': { enabled: false, text: 'Q', font: "'Tangerine', cursive", size: 25, color: '#ffffff', bold: true, italic: false, x: 0, y: -158, align: 'center' },
+        'Spodek': { enabled: false, text: 'J', font: "'Tangerine', cursive", size: 25, color: '#ffffff', bold: true, italic: false, x: 0, y: -158, align: 'center' }
+    },
+
+    // Per suit přepis barvy textu (null = bez override, použij globál)
+    textSuitColors: {
+        'Červené': null,
+        'Zelené':  null,
+        'Kule':    null,
+        'Žaludy':  null
+    },
+
     // --- REŽIM KVARTETA (v1.5) ---
     quartetSettings: {
         attributeNames: ["Výška", "Váha", "Věk", "Síla"], // Výchozí názvy
@@ -245,45 +262,74 @@ function createEmptyCard(id, label) {
 
 // --- HISTORIE (UNDO / REDO) ---
 
+// Maximální počet snapshotů v historii. Každý snapshot drží celý stav včetně
+// base64 obrázků (32 karet × stovky kB). Nízký limit chrání paměť tabu.
+const HISTORY_LIMIT = 5;
+
 function saveState() {
     // Smažeme budoucí větve při nové akci
     if (AppState.historyIndex < AppState.history.length - 1) {
         AppState.history = AppState.history.slice(0, AppState.historyIndex + 1);
     }
-    
-    // Uložíme hlubokou kopii stavu
-    const stateCopy = JSON.parse(JSON.stringify({
-        ...AppState,
-        history: [],
-        historyIndex: -1
-    }));
-    
-    AppState.history.push(stateCopy);
-    if (AppState.history.length > 50) AppState.history.shift();
-    AppState.historyIndex = AppState.history.length - 1;
+
+    // Uložíme hlubokou kopii stavu — JSON.stringify může selhat při velkém
+    // stavu (OOM, structured-clone limit). Při selhání jen logujeme a
+    // historie zůstane beze změny; UI dál funguje.
+    try {
+        const stateCopy = JSON.parse(JSON.stringify({
+            ...AppState,
+            history: [],
+            historyIndex: -1
+        }));
+        AppState.history.push(stateCopy);
+        if (AppState.history.length > HISTORY_LIMIT) AppState.history.shift();
+        AppState.historyIndex = AppState.history.length - 1;
+    } catch (e) {
+        console.error('saveState: deep clone selhal, snapshot přeskočen', e);
+    }
 
     autosaveToLocalStorage();
-    console.log("State Saved. Index:", AppState.historyIndex);
+}
+
+function showAutosaveWarning(message) {
+    let banner = document.getElementById('autosave-warning');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'autosave-warning';
+        banner.style.cssText = 'position:fixed; top:10px; right:10px; z-index:9999; background:#b91c1c; color:#fff; padding:10px 14px; border-radius:6px; font-size:12px; max-width:320px; box-shadow:0 4px 12px rgba(0,0,0,0.4); cursor:pointer;';
+        banner.addEventListener('click', () => banner.remove());
+        document.body.appendChild(banner);
+    }
+    banner.textContent = '⚠️ ' + message + ' (klikni pro skrytí)';
 }
 
 function autosaveToLocalStorage() {
-    try {
-        const normalizeKeys = (obj) => {
-            if (!obj || typeof obj !== 'object') return obj;
-            const normalized = {};
-            for (let key in obj) {
-                const normKey = key.normalize('NFC');
-                normalized[normKey] = obj[key];
-            }
-            return normalized;
-        };
-        
-        // Vždy normalizujeme klíče barev při ukládání (ochrana proti Mac NFD)
-        AppState.suitSettings = normalizeKeys(AppState.suitSettings);
+    const normalizeKeys = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        const normalized = {};
+        for (let key in obj) {
+            const normKey = key.normalize('NFC');
+            normalized[normKey] = obj[key];
+        }
+        return normalized;
+    };
 
+    // Vždy normalizujeme klíče barev při ukládání (ochrana proti Mac NFD)
+    AppState.suitSettings = normalizeKeys(AppState.suitSettings);
+
+    try {
         const stateToSave = { ...AppState, history: [], historyIndex: -1 };
         localStorage.setItem('cardgen_autosave', JSON.stringify(stateToSave));
-    } catch(e) { /* ignorovat - např. private mode */ }
+    } catch (e) {
+        // QuotaExceededError nebo serializační chyba → upozornit uživatele,
+        // aby exportoval projekt přes "Uložit Projekt".
+        const isQuota = e && (e.name === 'QuotaExceededError' || (e.code && e.code === 22));
+        const msg = isQuota
+            ? 'Autosave selhal — překročen limit localStorage. Exportuj projekt přes „Uložit Projekt".'
+            : 'Autosave selhal: ' + (e && e.message ? e.message : 'neznámá chyba') + '. Exportuj projekt přes „Uložit Projekt".';
+        showAutosaveWarning(msg);
+        console.error('autosaveToLocalStorage:', e);
+    }
 }
 
 function undo() {
@@ -387,6 +433,41 @@ function renderUIFromState() {
     }
 }
 
+// Idempotentně doplní nová pole stavu, která nebyla v dříve uloženém autosave.
+// Bez tohoto by starý projekt po nasazení nové verze padal kvůli `undefined`.
+function migrateMissingState() {
+    const defaultTextValue = (text) => ({
+        enabled: false, text, font: "'Tangerine', cursive", size: 25, color: '#ffffff',
+        bold: true, italic: false, x: 0, y: -158, align: 'center'
+    });
+    if (!AppState.textValueSettings || typeof AppState.textValueSettings !== 'object') {
+        AppState.textValueSettings = {
+            'Eso':    defaultTextValue('A'),
+            'Král':   defaultTextValue('K'),
+            'Svršek': defaultTextValue('Q'),
+            'Spodek': defaultTextValue('J')
+        };
+    } else {
+        ['Eso', 'Král', 'Svršek', 'Spodek'].forEach(val => {
+            if (!AppState.textValueSettings[val]) {
+                const fallback = { 'Eso': 'A', 'Král': 'K', 'Svršek': 'Q', 'Spodek': 'J' };
+                AppState.textValueSettings[val] = defaultTextValue(fallback[val]);
+            } else if (AppState.textValueSettings[val].font === "'Cinzel', serif") {
+                // Předchozí default fontu (Cinzel) byl změněn na Tangerine.
+                // Pokud uživatel font ručně nezměnil, doženeme to.
+                AppState.textValueSettings[val].font = "'Tangerine', cursive";
+            }
+        });
+    }
+    if (!AppState.textSuitColors || typeof AppState.textSuitColors !== 'object') {
+        AppState.textSuitColors = { 'Červené': null, 'Zelené': null, 'Kule': null, 'Žaludy': null };
+    } else {
+        ['Červené', 'Zelené', 'Kule', 'Žaludy'].forEach(s => {
+            if (!(s in AppState.textSuitColors)) AppState.textSuitColors[s] = null;
+        });
+    }
+}
+
 // Spuštění po načtení
 window.onload = () => {
     const normalizeKeys = (obj) => {
@@ -408,6 +489,7 @@ window.onload = () => {
                 parsed.suitSettings = normalizeKeys(parsed.suitSettings);
             }
             AppState = { ...AppState, ...parsed, history: [], historyIndex: -1 };
+            migrateMissingState();
             saveState();
             initCardsByMode(AppState.gameMode || 'playing_cards');
             renderUIFromState();
@@ -415,10 +497,12 @@ window.onload = () => {
         } catch(e) {}
     }
     if (AppState.cards.length === 0) {
+        migrateMissingState();
         initCardsByMode('playing_cards');
     } else {
         // Normalizujeme i v případě, že karty už existují
         AppState.suitSettings = normalizeKeys(AppState.suitSettings);
+        migrateMissingState();
         initCardsByMode(AppState.gameMode || 'playing_cards');
         renderUIFromState();
     }

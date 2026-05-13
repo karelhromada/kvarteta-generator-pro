@@ -87,7 +87,9 @@ document.addEventListener('mouseup', () => {
     if (isDragging) {
         isDragging = false;
         dragLayer = null;
-        saveState(); // Uložíme finální pozici do historie
+        // Debounced save: zabrání bouři snapshotů při rychlém ladění pozice
+        // na 32-karetní sadě (jeden snapshot = stovky kB až MB).
+        debouncedSaveState();
     }
 });
 
