@@ -442,10 +442,9 @@ function drawSymbols(cardEl, card) {
 }
 
 function drawQuartetOverlay(cardEl, card) {
-    // Hotová sada (loadFinishedSet) zapne hideOverlay — obrázek karty
-    // už obsahuje gradient, ID, jméno, popis i statistiky. Nesmí se přes
-    // něj kreslit nic dalšího (zejména .kvarteta-overlay-bottom s 60% inset
-    // shadowem ztmavil spodní třetinu hotových karet).
+    // hideOverlay (auto v loadFinishedSet, ručně přes checkbox v UI) skryje
+    // všechny dynamicky kreslené prvky kvarteta — ID, jméno, popis, statistiky
+    // i rám. Karta zůstane čistě obrázkem (užitečné pro pre-designed sady).
     if (AppState.quartetSettings && AppState.quartetSettings.hideOverlay) return;
     const data = card.quartetData || { name: "", description: "", stats: ["", "", "", ""] };
     const parts = card.id.split('_'); // e.g. 'q_1A'
@@ -475,11 +474,6 @@ function drawQuartetOverlay(cardEl, card) {
         borderEl.style.zIndex = 10;
         cardEl.appendChild(borderEl);
     }
-
-    // Overlay Bottom
-    const overlayBottom = document.createElement('div');
-    overlayBottom.className = 'kvarteta-overlay-bottom';
-    cardEl.appendChild(overlayBottom);
 
     // ID Badge
     const idBadge = document.createElement('div');
