@@ -129,6 +129,10 @@
                     <label>Nechci mít na kvartetech vlastnosti</label>
                     <input type="checkbox" id="quartet-hide-stats" onchange="updateQuartetConfig('hideStats', this.checked)">
                 </div>
+                <div class="control-row" title="Vypne ID, jméno, popis, vlastnosti i rám. Karta zůstane jen jako čistý obrázek — užitečné když máš design hotový jinde nebo si chceš jen prohlížet sadu.">
+                    <label>Skrýt všechny prvky kvarteta (jen obrázek)</label>
+                    <input type="checkbox" id="quartet-hide-overlay" onchange="updateQuartetConfig('hideOverlay', this.checked)">
+                </div>
                 <div class="control-row">
                     <label>Styl písma (Font)</label>
                     <select id="quartet-font-family" class="dropdown" onchange="updateQuartetConfig('fontFamily', this.value)">

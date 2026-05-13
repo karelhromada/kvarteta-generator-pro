@@ -1458,6 +1458,10 @@ function renderUIFromState() {
              const chk = document.getElementById('quartet-hide-stats');
              if (chk) chk.checked = AppState.quartetSettings.hideStats;
         }
+        if (AppState.quartetSettings.hideOverlay !== undefined) {
+             const chk2 = document.getElementById('quartet-hide-overlay');
+             if (chk2) chk2.checked = AppState.quartetSettings.hideOverlay;
+        }
         setVal('quartet-font-family', AppState.quartetSettings.fontFamily || "'Cinzel', serif");
         setVal('quartet-stat-shape', AppState.quartetSettings.statShape || 'hexagon');
         setVal('quartet-stat-layout', AppState.quartetSettings.statLayout || 'corners');
