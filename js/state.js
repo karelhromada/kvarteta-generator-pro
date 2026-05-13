@@ -287,49 +287,6 @@ function saveState() {
     } catch (e) {
         console.error('saveState: deep clone selhal, snapshot přeskočen', e);
     }
-
-    autosaveToLocalStorage();
-}
-
-function showAutosaveWarning(message) {
-    let banner = document.getElementById('autosave-warning');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'autosave-warning';
-        banner.style.cssText = 'position:fixed; top:10px; right:10px; z-index:9999; background:#b91c1c; color:#fff; padding:10px 14px; border-radius:6px; font-size:12px; max-width:320px; box-shadow:0 4px 12px rgba(0,0,0,0.4); cursor:pointer;';
-        banner.addEventListener('click', () => banner.remove());
-        document.body.appendChild(banner);
-    }
-    banner.textContent = '⚠️ ' + message + ' (klikni pro skrytí)';
-}
-
-function autosaveToLocalStorage() {
-    const normalizeKeys = (obj) => {
-        if (!obj || typeof obj !== 'object') return obj;
-        const normalized = {};
-        for (let key in obj) {
-            const normKey = key.normalize('NFC');
-            normalized[normKey] = obj[key];
-        }
-        return normalized;
-    };
-
-    // Vždy normalizujeme klíče barev při ukládání (ochrana proti Mac NFD)
-    AppState.suitSettings = normalizeKeys(AppState.suitSettings);
-
-    try {
-        const stateToSave = { ...AppState, history: [], historyIndex: -1 };
-        localStorage.setItem('cardgen_autosave', JSON.stringify(stateToSave));
-    } catch (e) {
-        // QuotaExceededError nebo serializační chyba → upozornit uživatele,
-        // aby exportoval projekt přes "Uložit Projekt".
-        const isQuota = e && (e.name === 'QuotaExceededError' || (e.code && e.code === 22));
-        const msg = isQuota
-            ? 'Autosave selhal — překročen limit localStorage. Exportuj projekt přes „Uložit Projekt".'
-            : 'Autosave selhal: ' + (e && e.message ? e.message : 'neznámá chyba') + '. Exportuj projekt přes „Uložit Projekt".';
-        showAutosaveWarning(msg);
-        console.error('autosaveToLocalStorage:', e);
-    }
 }
 
 function undo() {
@@ -468,42 +425,13 @@ function migrateMissingState() {
     }
 }
 
-// Spuštění po načtení
+// Spuštění po načtení.
+// Autosave do localStorage byl odebrán — držel base64 obrázky 32 karet
+// a přetékal 5 MB limit. Persistence je teď výhradně přes „Uložit Projekt"
+// → JSON. Při bootu uvolníme starý blob, aby case-by-case neoživoval
+// zděděný globalOverlay (dark frame), který ztmavoval karty v exportu.
 window.onload = () => {
-    const normalizeKeys = (obj) => {
-        if (!obj || typeof obj !== 'object') return obj;
-        const normalized = {};
-        for (let key in obj) {
-            const normKey = key.normalize('NFC');
-            normalized[normKey] = obj[key];
-        }
-        return normalized;
-    };
-
-    const saved = localStorage.getItem('cardgen_autosave');
-    if (saved) {
-        try {
-            const parsed = JSON.parse(saved);
-            // Normalizujeme klíče barev při načtení
-            if (parsed.suitSettings) {
-                parsed.suitSettings = normalizeKeys(parsed.suitSettings);
-            }
-            AppState = { ...AppState, ...parsed, history: [], historyIndex: -1 };
-            migrateMissingState();
-            saveState();
-            initCardsByMode(AppState.gameMode || 'playing_cards');
-            renderUIFromState();
-            return;
-        } catch(e) {}
-    }
-    if (AppState.cards.length === 0) {
-        migrateMissingState();
-        initCardsByMode('playing_cards');
-    } else {
-        // Normalizujeme i v případě, že karty už existují
-        AppState.suitSettings = normalizeKeys(AppState.suitSettings);
-        migrateMissingState();
-        initCardsByMode(AppState.gameMode || 'playing_cards');
-        renderUIFromState();
-    }
+    try { localStorage.removeItem('cardgen_autosave'); } catch (e) {}
+    migrateMissingState();
+    initCardsByMode('playing_cards');
 };

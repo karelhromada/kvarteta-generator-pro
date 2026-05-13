@@ -148,7 +148,9 @@ function updateCardTransform(card) {
     const img = cardEl.querySelector('.card-bg img');
     if (img) {
         const c = card.crop;
-        img.style.transform = `translate(calc(-50% + ${c.x}px), calc(-50% + ${c.y}px)) scale(${c.scale * (c.stretchX || 1)}, ${c.scale * (c.stretchY || 1)})`;
+        // Bez calc() — identická forma jako v createCardElement (kvůli
+        // html2canvas, který calc() v transformu vyhodnocuje s chybou).
+        img.style.transform = `translate(-50%, -50%) translate(${c.x}px, ${c.y}px) scale(${c.scale * (c.stretchX || 1)}, ${c.scale * (c.stretchY || 1)})`;
     }
 }
 

@@ -188,7 +188,10 @@ function createCardElement(card) {
         const img = document.createElement('img');
         img.src = card.image;
         const c = card.crop;
-        img.style.transform = `translate(calc(-50% + ${c.x}px), calc(-50% + ${c.y}px)) scale(${c.scale * c.stretchX}, ${c.scale * c.stretchY})`;
+        // Dvojitý translate (procentní + pixelový) místo calc() — html2canvas
+        // 1.4.x vyhodnocoval calc() uvnitř transformu jinak než prohlížeč,
+        // což vedlo k sub-pixel posunům v exportu.
+        img.style.transform = `translate(-50%, -50%) translate(${c.x}px, ${c.y}px) scale(${c.scale * c.stretchX}, ${c.scale * c.stretchY})`;
         bgLayer.appendChild(img);
     }
     cardEl.appendChild(bgLayer);
@@ -199,7 +202,7 @@ function createCardElement(card) {
         logo.className = 'card-logo';
         logo.style.opacity = AppState.globalLogo.opacity;
         const l = AppState.globalLogo;
-        logo.style.transform = `translate(calc(-50% + ${l.x}px), calc(-50% + ${l.y}px)) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
+        logo.style.transform = `translate(-50%, -50%) translate(${l.x}px, ${l.y}px) scale(${l.scale * l.stretchX}, ${l.scale * l.stretchY})`;
         const logoImg = document.createElement('img');
         logoImg.src = AppState.globalLogo.image;
         logoImg.alt = '';
@@ -216,7 +219,7 @@ function createCardElement(card) {
         cardLogoEl.style.opacity = (cl.opacity !== undefined) ? cl.opacity : 1;
         const sX = (cl.stretchX !== undefined) ? cl.stretchX : 1;
         const sY = (cl.stretchY !== undefined) ? cl.stretchY : 1;
-        cardLogoEl.style.transform = `translate(calc(-50% + ${cl.x}px), calc(-50% + ${cl.y}px)) scale(${cl.scale * sX}, ${cl.scale * sY})`;
+        cardLogoEl.style.transform = `translate(-50%, -50%) translate(${cl.x}px, ${cl.y}px) scale(${cl.scale * sX}, ${cl.scale * sY})`;
         const cardLogoImg = document.createElement('img');
         cardLogoImg.src = cl.image;
         cardLogoImg.alt = '';
@@ -1901,13 +1904,7 @@ async function performBulkImport() {
         }
 
         // 4) Uložit + re-render
-        let storageWarning = '';
-        try {
-            saveState();
-        } catch (e) {
-            console.error('saveState failed', e);
-            storageWarning = ' ⚠️ Autosave selhal (localStorage limit) — exportujte projekt!';
-        }
+        saveState();
         renderUIFromState();
 
         // 5) Summary
@@ -1919,7 +1916,7 @@ async function performBulkImport() {
             parts.push(`Obrázky: ${imgMatched}/${bulkState.images.length} přiřazeno` + (imgUnmatched.length ? `, bez karty: ${imgUnmatched.join(', ')}` : ''));
         }
         if (!parts.length) parts.push('Nebyl vybrán žádný soubor.');
-        if (summaryEl) summaryEl.textContent = parts.join(' • ') + storageWarning;
+        if (summaryEl) summaryEl.textContent = parts.join(' • ');
 
         // Zavřít modal po krátké pauze, aby si uživatel přečetl summary
         if (csvMatched > 0 || imgMatched > 0) {
@@ -2006,13 +2003,38 @@ async function loadFinishedSet(event) {
         return;
     }
 
-    // Hotová karta = celý design je už zapečen v obrázku.
-    // Vypneme dynamické symboly (jinak by se kreslily přes obrázek)
-    // a u kvarteta i statový overlay.
+    // Hotová karta = celý design je už zapečen v obrázku. Nuluje se VŠECHNO,
+    // co by se kreslilo přes obrázek: symboly, statistiky kvarteta, globální
+    // rám (s opacity 0.8 byl hlavním zdrojem ztmavení), globální logo,
+    // per-suit borders, globální text po hodnotě, per-card logo a per-card
+    // text override. Bez toho zděděné vrstvy z minulé session prosakovaly
+    // na nový hotový set.
     AppState.showSymbols = false;
     if (AppState.quartetSettings) {
         AppState.quartetSettings.hideStats = true;
     }
+    if (AppState.globalOverlay) {
+        AppState.globalOverlay.image = null;
+        AppState.globalOverlay.borderWidth = 0;
+        AppState.globalOverlay.opacity = 1;
+    }
+    if (AppState.globalLogo) {
+        AppState.globalLogo.image = null;
+    }
+    if (AppState.suitSettings) {
+        Object.values(AppState.suitSettings).forEach(s => {
+            if (s) s.borderWidth = 0;
+        });
+    }
+    if (AppState.textValueSettings) {
+        Object.values(AppState.textValueSettings).forEach(v => {
+            if (v) v.enabled = false;
+        });
+    }
+    AppState.cards.forEach(c => {
+        c.cardLogo = null;
+        c.textOverlay = null;
+    });
 
     const result = assignImagesToCards(loaded, AppState.gameMode);
 
@@ -2020,6 +2042,10 @@ async function loadFinishedSet(event) {
     const SCALE_UI = 3.8;
     const slotW = AppState.cardWidth  * SCALE_UI;
     const slotH = AppState.cardHeight * SCALE_UI;
+    // Tolerance pro snap stretchX/Y → 1.0 (0.5 %). Brání sub-pixel
+    // deformaci u obrázků se „skoro správným" poměrem stran (FP + naturalW
+    // zaokrouhlení by jinak daly stretchX≈1.0003 a html2canvas to rozmaže).
+    const SNAP_EPS = 0.005;
 
     result.assignments.forEach(({ cardId, item }) => {
         const card = AppState.cards.find(c => c.id === cardId);
@@ -2032,22 +2058,18 @@ async function loadFinishedSet(event) {
         const fitX = (item.naturalW > 0) ? slotW / item.naturalW : 1;
         const fitY = (item.naturalH > 0) ? slotH / item.naturalH : 1;
         const baseScale = Math.min(fitX, fitY);
+        const sx = (baseScale > 0) ? fitX / baseScale : 1;
+        const sy = (baseScale > 0) ? fitY / baseScale : 1;
         card.crop = {
             x: 0,
             y: 0,
             scale: baseScale,
-            stretchX: (baseScale > 0) ? fitX / baseScale : 1,
-            stretchY: (baseScale > 0) ? fitY / baseScale : 1
+            stretchX: Math.abs(sx - 1) < SNAP_EPS ? 1 : sx,
+            stretchY: Math.abs(sy - 1) < SNAP_EPS ? 1 : sy
         };
     });
 
-    let storageWarning = '';
-    try {
-        saveState();
-    } catch (e) {
-        console.error('saveState failed', e);
-        storageWarning = '⚠️ Autosave selhal (limit localStorage). Exportujte projekt přes "Uložit Projekt".';
-    }
+    saveState();
     renderUIFromState();
 
     showFinishedSetSummary({
@@ -2055,7 +2077,7 @@ async function loadFinishedSet(event) {
         matched: result.assignments.length,
         unmatched: result.unmatched,
         strategy: result.strategy
-    }, storageWarning);
+    }, '');
 }
 
 function getImageNaturalSize(dataURL) {
