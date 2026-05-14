@@ -127,6 +127,40 @@ let AppState = {
         }
     },
 
+    // --- REŽIM KVARTETA — MYTOLOGIE (v1.0 + v2.0) ---
+    // Paralelní k quartetSettings; sdílí sets[].color, attributeNames, fontFamily,
+    // hideStats a hideOverlay přes ČTENÍ. Sem patří jen mytologie-specifické věci.
+    mythologySettings: {
+        attributePreset: ["Síla", "Magie", "Stáří", "Hrozivost"],
+        defaultBadgeTexts: {
+            "1": "ŘECKÁ MYTOLOGIE",   "2": "SEVERSKÁ MYTOLOGIE", "3": "EGYPTSKÁ MYTOLOGIE",
+            "4": "SLOVANSKÁ MYTOLOGIE","5": "ŘÍMSKÁ MYTOLOGIE",   "6": "KELTSKÁ MYTOLOGIE",
+            "7": "INDICKÁ MYTOLOGIE", "8": "AZTÉCKÁ MYTOLOGIE"
+        },
+        // Default = prázdný → renderer fallbackuje na barvu skupiny (quartetSettings.sets[g].color)
+        badgeBorderColors: {},
+        statBoxBorderWidth: 2.8,
+        // v2: vnitřní rámeček (užší + odsazení)
+        innerBorderWidth: 6,    // px
+        innerBorderInset: 0,    // px
+        // v2: velikost statistik (multiplier nad clamp())
+        statLabelSize: 1.0,
+        statValueSize: 1.0,
+        // v2: posun name+subtitle patche (společně)
+        namePatchOffsetX: 0,    // %
+        namePatchOffsetY: 0,    // %
+        // v3: stat-box layout + fix přesahu jména
+        statBoxGap: 3,          // % (mezera mezi 4 boxy v gridu)
+        statBoxHeight: 100,     // % výšky patche (100 = vyplnit, méně = box vycentrován v patchi)
+        namePatchHeight: 14,    // % výšky karty (předtím fix 11 — bylo malé)
+        // v4: ID karty (číslo+hodnota, např. „1A") jako samostatný badge vlevo nahoře
+        idBadgeOffsetX: 0,      // % (kladné = doprava, záporné = doleva)
+        idBadgeOffsetY: 0,      // % (kladné = dolů, záporné = nahoru)
+        // v5: velikost rohových badge (id + origin) — multiplier nad clamp() font-size,
+        // padding škáluje em-based, takže rámeček se „automaticky upraví" s fontem.
+        cornerBadgeSize: 1.0
+    },
+
     showSymbols: true,
 
     // Nastavení symbolů pro každou barvu (značku)
@@ -164,10 +198,16 @@ let AppState = {
 
 // Předvolené rozměry karet podle režimu (mm)
 const MODE_CARD_SIZES = {
-    'playing_cards': { width: 63, height: 105 },
-    'quartet':       { width: 65, height: 95 },
-    'pexeso':        { width: 50, height: 50 }
+    'playing_cards':     { width: 63, height: 105 },
+    'quartet':           { width: 65, height: 95 },
+    'quartet_mythology': { width: 60, height: 85 },
+    'pexeso':            { width: 50, height: 50 }
 };
+
+// Mód patří do rodiny kvartet (sdílí mřížku 8×4 a card-data strukturu)
+function isQuartetFamily(mode) {
+    return mode === 'quartet' || mode === 'quartet_mythology';
+}
 
 function initCardsByMode(mode) {
     // Pokud uživatel mění režim (ne pouhý reload), přepneme i rozměry karet
@@ -187,7 +227,7 @@ function initCardsByMode(mode) {
                 AppState.cards.push(createEmptyCard(`${suit}_${val}`, `${val} ${suit}`));
             });
         });
-    } else if (mode === 'quartet') {
+    } else if (mode === 'quartet' || mode === 'quartet_mythology') {
         for (let i = 1; i <= 8; i++) {
             ['A', 'B', 'C', 'D'].forEach(letter => {
                 AppState.cards.push(createEmptyCard(`q_${i}${letter}`, `${i}${letter}`));
@@ -202,40 +242,42 @@ function initCardsByMode(mode) {
     
     // UI Přepínač
     const qGlobalPanel = document.getElementById('quartet-global-panel');
+    const mythGlobalPanel = document.getElementById('mythology-global-panel');
     const symGlobalPanel = document.getElementById('symbols-global-panel');
     const layoutGlobalPanel = document.getElementById('layout-global-panel');
     const suitGlobalPanel = document.getElementById('suit-global-panel');
     const importBtn = document.getElementById('btn-import-json');
     const bulkBtn = document.getElementById('btn-bulk-import');
     const indQuartetControls = document.getElementById('individual-quartet-controls');
+    const indMythControls = document.getElementById('ind-mythology-controls');
     const indLayoutControls = document.getElementById('individual-symbols-subgroup');
     const indPositionControls = document.getElementById('ind-position-subgroup');
     const showSymbolsRow = document.getElementById('show-symbols-row');
-    
+
+    const isFamily = isQuartetFamily(mode);
+    const isMyth   = (mode === 'quartet_mythology');
+    const isClassicQ = (mode === 'quartet');
+
+    // Toggle body class (pro print CSS apod.)
+    if (document && document.body) {
+        document.body.classList.toggle('mode-quartet-mythology', isMyth);
+        document.body.classList.toggle('mode-quartet', isClassicQ);
+    }
+
     if (qGlobalPanel) {
-        if (mode === 'quartet') {
-            qGlobalPanel.style.display = 'block';
-            if (symGlobalPanel) symGlobalPanel.style.display = 'none';
-            if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'none';
-            if (suitGlobalPanel) suitGlobalPanel.style.display = 'none';
-            if (importBtn) importBtn.style.display = 'flex';
-            if (bulkBtn) bulkBtn.style.display = 'flex';
-            if (indQuartetControls) indQuartetControls.style.display = 'block';
-            if (indLayoutControls) indLayoutControls.style.display = 'none';
-            if (indPositionControls) indPositionControls.style.display = 'none';
-            if (showSymbolsRow) showSymbolsRow.style.display = 'none';
-        } else {
-            qGlobalPanel.style.display = 'none';
-            if (symGlobalPanel) symGlobalPanel.style.display = 'block';
-            if (layoutGlobalPanel) layoutGlobalPanel.style.display = 'flex';
-            if (suitGlobalPanel) suitGlobalPanel.style.display = 'block';
-            if (importBtn) importBtn.style.display = 'none';
-            if (bulkBtn) bulkBtn.style.display = 'none';
-            if (indQuartetControls) indQuartetControls.style.display = 'none';
-            if (indLayoutControls) indLayoutControls.style.display = 'block';
-            if (indPositionControls) indPositionControls.style.display = 'block';
-            if (showSymbolsRow) showSymbolsRow.style.display = 'flex';
-        }
+        // Klasický kvartet panel jen pro mód 'quartet'
+        qGlobalPanel.style.display = isClassicQ ? 'block' : 'none';
+        if (mythGlobalPanel) mythGlobalPanel.style.display = isMyth ? 'block' : 'none';
+        if (symGlobalPanel)    symGlobalPanel.style.display    = isFamily ? 'none' : 'block';
+        if (layoutGlobalPanel) layoutGlobalPanel.style.display = isFamily ? 'none' : 'flex';
+        if (suitGlobalPanel)   suitGlobalPanel.style.display   = isFamily ? 'none' : 'block';
+        if (importBtn) importBtn.style.display = isFamily ? 'flex' : 'none';
+        if (bulkBtn)   bulkBtn.style.display   = isFamily ? 'flex' : 'none';
+        if (indQuartetControls) indQuartetControls.style.display = isFamily ? 'block' : 'none';
+        if (indMythControls)    indMythControls.style.display    = isMyth ? 'block' : 'none';
+        if (indLayoutControls)  indLayoutControls.style.display  = isFamily ? 'none' : 'block';
+        if (indPositionControls) indPositionControls.style.display = isFamily ? 'none' : 'block';
+        if (showSymbolsRow) showSymbolsRow.style.display = isFamily ? 'none' : 'flex';
     }
 
     saveState();
@@ -255,7 +297,9 @@ function createEmptyCard(id, label) {
         quartetData: {
             name: "",
             description: "",
-            stats: ["", "", "", ""] // 4 default stats
+            stats: ["", "", "", ""], // 4 default stats
+            subtitle: "",            // mytologie-only, klasika ignoruje
+            badgeOverride: null      // null = použij group default; jinak { text, borderColor }
         }
     };
 }
@@ -421,6 +465,68 @@ function migrateMissingState() {
     } else {
         ['Červené', 'Zelené', 'Kule', 'Žaludy'].forEach(s => {
             if (!(s in AppState.textSuitColors)) AppState.textSuitColors[s] = null;
+        });
+    }
+
+    // Mytologie režim — starší projekty bez tohoto bloku dostanou default
+    if (!AppState.mythologySettings || typeof AppState.mythologySettings !== 'object') {
+        AppState.mythologySettings = {
+            attributePreset: ["Síla", "Magie", "Stáří", "Hrozivost"],
+            defaultBadgeTexts: {
+                "1": "ŘECKÁ MYTOLOGIE",   "2": "SEVERSKÁ MYTOLOGIE", "3": "EGYPTSKÁ MYTOLOGIE",
+                "4": "SLOVANSKÁ MYTOLOGIE","5": "ŘÍMSKÁ MYTOLOGIE",   "6": "KELTSKÁ MYTOLOGIE",
+                "7": "INDICKÁ MYTOLOGIE", "8": "AZTÉCKÁ MYTOLOGIE"
+            },
+            badgeBorderColors: {},
+            statBoxBorderWidth: 2.8,
+            // v2
+            innerBorderWidth: 6,
+            innerBorderInset: 0,
+            statLabelSize: 1.0,
+            statValueSize: 1.0,
+            namePatchOffsetX: 0,
+            namePatchOffsetY: 0,
+            // v3
+            statBoxGap: 3,
+            statBoxHeight: 100,
+            namePatchHeight: 14,
+            // v4
+            idBadgeOffsetX: 0,
+            idBadgeOffsetY: 0,
+            // v5
+            cornerBadgeSize: 1.0
+        };
+    } else {
+        const ms = AppState.mythologySettings;
+        if (!Array.isArray(ms.attributePreset))    ms.attributePreset    = ["Síla", "Magie", "Stáří", "Hrozivost"];
+        if (!ms.defaultBadgeTexts)                 ms.defaultBadgeTexts  = {};
+        if (!ms.badgeBorderColors)                 ms.badgeBorderColors  = {};
+        if (typeof ms.statBoxBorderWidth !== 'number') ms.statBoxBorderWidth = 2.8;
+        // v2 fallbacky
+        if (typeof ms.innerBorderWidth !== 'number') ms.innerBorderWidth = 6;
+        if (typeof ms.innerBorderInset !== 'number') ms.innerBorderInset = 0;
+        if (typeof ms.statLabelSize    !== 'number') ms.statLabelSize    = 1.0;
+        if (typeof ms.statValueSize    !== 'number') ms.statValueSize    = 1.0;
+        if (typeof ms.namePatchOffsetX !== 'number') ms.namePatchOffsetX = 0;
+        if (typeof ms.namePatchOffsetY !== 'number') ms.namePatchOffsetY = 0;
+        // v3 fallbacky
+        if (typeof ms.statBoxGap        !== 'number') ms.statBoxGap        = 3;
+        if (typeof ms.statBoxHeight     !== 'number') ms.statBoxHeight     = 100;
+        if (typeof ms.namePatchHeight   !== 'number') ms.namePatchHeight   = 14;
+        // v4 fallbacky
+        if (typeof ms.idBadgeOffsetX    !== 'number') ms.idBadgeOffsetX    = 0;
+        if (typeof ms.idBadgeOffsetY    !== 'number') ms.idBadgeOffsetY    = 0;
+        // v5 fallback
+        if (typeof ms.cornerBadgeSize   !== 'number') ms.cornerBadgeSize   = 1.0;
+    }
+
+    // Karty mohou mít chybějící subtitle/badgeOverride po načtení staršího projektu
+    if (Array.isArray(AppState.cards)) {
+        AppState.cards.forEach(c => {
+            if (c && c.quartetData) {
+                if (typeof c.quartetData.subtitle !== 'string') c.quartetData.subtitle = "";
+                if (!('badgeOverride' in c.quartetData))        c.quartetData.badgeOverride = null;
+            }
         });
     }
 }

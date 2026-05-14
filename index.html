@@ -67,6 +67,7 @@
                     <select id="game-mode-select" class="dropdown" onchange="initCardsByMode(this.value)">
                         <option value="playing_cards">Hrací Karty (32 ks)</option>
                         <option value="quartet">Kvarteta (32 ks)</option>
+                        <option value="quartet_mythology">Kvarteta — Mytologie (32 ks)</option>
                         <option value="pexeso">Pexeso (variabilní)</option>
                     </select>
                 </div>
@@ -315,6 +316,177 @@
                     <div class="slider-stepper">
                         <input type="range" id="quartet-stat-spacing" oninput="updateQuartetConfig('statSpacing', this.value); updateValueBadge(this.id, this.value)" min="0" max="60" value="5" step="1" style="width:100%;">
                     </div>
+                </div>
+            </div>
+
+            <!-- MYTOLOGIE PANEL — paralelní k #quartet-global-panel, viditelný jen v 'quartet_mythology' -->
+            <div id="mythology-global-panel" class="panel-section" style="display:none; background:rgba(212, 175, 55, 0.08); border: 1px solid #d4af37; padding: 15px; border-radius: 8px;">
+                <h3 style="color:#d4af37;">Nastavení Mytologie</h3>
+
+                <div class="control-row" style="margin-bottom:10px;">
+                    <label>Aktivní Skupina (1-8)</label>
+                    <select id="mythology-group-select" class="dropdown" onchange="updateMythologyGroupColorUI()">
+                        <option value="1">Skupina 1</option>
+                        <option value="2">Skupina 2</option>
+                        <option value="3">Skupina 3</option>
+                        <option value="4">Skupina 4</option>
+                        <option value="5">Skupina 5</option>
+                        <option value="6">Skupina 6</option>
+                        <option value="7">Skupina 7</option>
+                        <option value="8">Skupina 8</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Barva Skupiny (rámeček + stat-boxy)</label>
+                    <input type="color" id="mythology-color-picker" style="width:50px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateMythologyColor(this.value)">
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Badge (rohový štítek)</h4>
+                <div class="control-row">
+                    <label>Text Badge</label>
+                    <input type="text" id="mythology-badge-text" placeholder="ŘECKÁ MYTOLOGIE" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" oninput="updateMythologyGroupField('badgeText', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Badge — Barva Rámečku</label>
+                    <input type="color" id="mythology-badge-border" style="width:50px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateMythologyGroupField('badgeBorderColor', this.value)">
+                </div>
+                <div class="control-row">
+                    <label>Šířka rámečku stat-boxů (px)</label>
+                    <input type="number" id="mythology-stat-border-w" step="0.1" min="0" max="10" value="2.8" style="width:80px; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" oninput="updateMythologyStatBorderWidth(this.value)">
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Názvy Atributů (Statistik)</h4>
+                <div class="control-row"><input type="text" id="myth-attr-0" placeholder="Síla"    style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" onchange="updateMythologyAttr(0, this.value)"></div>
+                <div class="control-row"><input type="text" id="myth-attr-1" placeholder="Magie"   style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" onchange="updateMythologyAttr(1, this.value)"></div>
+                <div class="control-row"><input type="text" id="myth-attr-2" placeholder="Stáří"   style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" onchange="updateMythologyAttr(2, this.value)"></div>
+                <div class="control-row"><input type="text" id="myth-attr-3" placeholder="Hrozivost" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" onchange="updateMythologyAttr(3, this.value)"></div>
+                <div class="control-row" style="margin-top:8px;">
+                    <button type="button" class="action-btn small" onclick="resetMythologyAttrs()" style="width:100%;">Resetovat atributy (Síla / Magie / Stáří / Hrozivost)</button>
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Layout a velikosti</h4>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Šířka rámečku (px)</label>
+                        <span class="value-badge" id="val-mythology-inner-w">6</span>
+                    </div>
+                    <input type="range" id="mythology-inner-w" min="0" max="15" step="0.5" value="6"
+                           oninput="updateMythologyVar('innerBorderWidth', this.value); updateValueBadge(this.id, this.value)" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Odsazení rámečku (px)</label>
+                        <span class="value-badge" id="val-mythology-inner-inset">0</span>
+                    </div>
+                    <input type="range" id="mythology-inner-inset" min="0" max="30" step="0.5" value="0"
+                           oninput="updateMythologyVar('innerBorderInset', this.value); updateValueBadge(this.id, this.value)" style="width:100%;">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Výška černého pruhu (jméno + podtitul) (%)</label>
+                        <span class="value-badge" id="val-mythology-name-h">14%</span>
+                    </div>
+                    <input type="range" id="mythology-name-h" min="8" max="25" step="0.5" value="14"
+                           oninput="updateMythologyVar('namePatchHeight', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Mezera mezi stat-boxy (%)</label>
+                        <span class="value-badge" id="val-mythology-stat-gap">3%</span>
+                    </div>
+                    <input type="range" id="mythology-stat-gap" min="0" max="15" step="0.5" value="3"
+                           oninput="updateMythologyVar('statBoxGap', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Výška stat-boxů (%)</label>
+                        <span class="value-badge" id="val-mythology-stat-box-h">100%</span>
+                    </div>
+                    <input type="range" id="mythology-stat-box-h" min="30" max="100" step="1" value="100"
+                           oninput="updateMythologyVar('statBoxHeight', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost názvu atributu</label>
+                        <span class="value-badge" id="val-mythology-stat-l-size">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-stat-l-size" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('statLabelSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost hodnoty</label>
+                        <span class="value-badge" id="val-mythology-stat-v-size">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-stat-v-size" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('statValueSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Jméno + podtitul — posun X (%)</label>
+                        <span class="value-badge" id="val-mythology-name-x">0%</span>
+                    </div>
+                    <input type="range" id="mythology-name-x" min="-30" max="30" step="0.5" value="0"
+                           oninput="updateMythologyVar('namePatchOffsetX', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Jméno + podtitul — posun Y (%)</label>
+                        <span class="value-badge" id="val-mythology-name-y">0%</span>
+                    </div>
+                    <input type="range" id="mythology-name-y" min="-30" max="30" step="0.5" value="0"
+                           oninput="updateMythologyVar('namePatchOffsetY', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>ID karty — posun X (%)</label>
+                        <span class="value-badge" id="val-mythology-id-x">0%</span>
+                    </div>
+                    <input type="range" id="mythology-id-x" min="-15" max="15" step="0.5" value="0"
+                           oninput="updateMythologyVar('idBadgeOffsetX', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>ID karty — posun Y (%)</label>
+                        <span class="value-badge" id="val-mythology-id-y">0%</span>
+                    </div>
+                    <input type="range" id="mythology-id-y" min="-15" max="15" step="0.5" value="0"
+                           oninput="updateMythologyVar('idBadgeOffsetY', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+
+                <div class="control-group" title="Mění velikost textu v ID badge i origin badge. Rámeček (padding) se automaticky upraví podle velikosti písma.">
+                    <div class="control-header">
+                        <label>Velikost rohových badge (ID + origin)</label>
+                        <span class="value-badge" id="val-mythology-corner-size">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-corner-size" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('cornerBadgeSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
+                </div>
+
+                <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Sdílené s klasikou</h4>
+                <div class="control-row">
+                    <label>Styl písma (Font)</label>
+                    <select id="mythology-font-family" class="dropdown" onchange="updateQuartetConfig('fontFamily', this.value)">
+                        <option value="'Cinzel', serif">Cinzel (Elegantní patkové)</option>
+                        <option value="'Cinzel Decorative', serif">Cinzel Decorative</option>
+                        <option value="'Playfair Display', serif">Playfair Display</option>
+                        <option value="'MedievalSharp', cursive">MedievalSharp</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Skrýt statistiky</label>
+                    <input type="checkbox" id="mythology-hide-stats" onchange="updateQuartetConfig('hideStats', this.checked)">
+                </div>
+                <div class="control-row" title="Vypne všechny mytologické prvky (badge, jméno, statistiky, rámeček). Karta zůstane jen jako čistý obrázek.">
+                    <label>Skrýt všechny mytologické prvky (jen obrázek)</label>
+                    <input type="checkbox" id="mythology-hide-overlay" onchange="updateQuartetConfig('hideOverlay', this.checked)">
                 </div>
             </div>
 
@@ -1184,6 +1356,29 @@
                         <input type="text" id="ind-q-stat1" placeholder="Stat 2" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 1)">
                         <input type="text" id="ind-q-stat2" placeholder="Stat 3" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 2)">
                         <input type="text" id="ind-q-stat3" placeholder="Stat 4" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:4px;" oninput="updateActiveQuartetData('stats', this.value, 3)">
+                    </div>
+
+                    <!-- MYTOLOGIE-only per-karta sekce (viditelná jen v 'quartet_mythology' režimu) -->
+                    <div id="ind-mythology-controls" style="display:none; padding-top:12px; margin-top:12px; border-top:1px dashed rgba(212, 175, 55, 0.4);">
+                        <h4 style="font-size:10px; color:#d4af37; margin-bottom:10px;">MYTOLOGIE — TATO KARTA</h4>
+                        <div class="control-group">
+                            <label>Podtitul (subtitle)</label>
+                            <input type="text" id="ind-q-subtitle" placeholder="např. Vládce nebes a blesků" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" oninput="updateActiveQuartetData('subtitle', this.value)">
+                        </div>
+                        <div class="control-row" style="margin-top:8px;">
+                            <label>Vlastní badge na této kartě</label>
+                            <input type="checkbox" id="ind-q-badge-toggle" onchange="toggleCardBadgeOverride(this.checked)">
+                        </div>
+                        <div id="ind-q-badge-detail" style="display:none; margin-top:6px;">
+                            <div class="control-group">
+                                <label>Badge text</label>
+                                <input type="text" id="ind-q-badge-text" style="width:100%; background:var(--bg-app); border:1px solid var(--border); color:#fff; padding:6px; border-radius:4px;" oninput="updateCardBadgeOverrideField('text', this.value)">
+                            </div>
+                            <div class="control-row">
+                                <label>Badge — barva rámečku</label>
+                                <input type="color" id="ind-q-badge-border" style="width:50px; height:24px; border:none; background:none; padding:0; cursor:pointer;" oninput="updateCardBadgeOverrideField('borderColor', this.value)">
+                            </div>
+                        </div>
                     </div>
                 </div>
 

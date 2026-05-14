@@ -264,7 +264,9 @@ function createCardElement(card) {
     }
     
     // VRSTVA 3: DYNAMICKÉ SYMBOLY
-    if (AppState.gameMode === 'quartet') {
+    if (AppState.gameMode === 'quartet_mythology') {
+        drawMythologyOverlay(cardEl, card);
+    } else if (AppState.gameMode === 'quartet') {
         drawQuartetOverlay(cardEl, card);
     } else if (AppState.showSymbols) {
         drawSymbols(cardEl, card);
@@ -629,6 +631,134 @@ function drawQuartetOverlay(cardEl, card) {
     cardDesc.style.fontFamily = fontFamily;
     cardDesc.style.color = useSetColorDesc ? cssColor : '#ddd';
     cardEl.appendChild(cardDesc);
+}
+
+// === MYTOLOGIE OVERLAY =====================================================
+// Replikuje vzhled mytologie_template_v4.html:
+//  - vnitřní barevný rámeček
+//  - origin badge vpravo nahoře (text + barva per skupina, lze přepsat per karta)
+//  - černý „name patch" 61.5–72.5 % s ID-Jméno (color) + subtitle (italic)
+//  - černý „stats patch" 73.5–100 % se 4 stat-boxy v gridu
+// Sdílí stav s klasickým kvartetem (barvy skupin, atributy, font, hideStats/Overlay)
+// přes ČTENÍ. Mytologie-specifické věci jsou v AppState.mythologySettings.
+function drawMythologyOverlay(cardEl, card) {
+    // Sdílené flags
+    if (AppState.quartetSettings?.hideOverlay) return;
+    const hideStats = AppState.quartetSettings?.hideStats || false;
+    const attrNames = AppState.quartetSettings?.attributeNames || ["Síla","Magie","Stáří","Hrozivost"];
+    const fontFamily = AppState.quartetSettings?.fontFamily || "'Cinzel', serif";
+
+    const data = card.quartetData || { name:"", subtitle:"", stats:["","","",""], badgeOverride: null };
+    const parts = card.id.split('_');
+    const subStr = parts.length > 1 ? parts[1] : '1A';
+    const group = subStr[0] || '1';
+
+    // Barva skupiny — sdíleno s klasikou
+    const innerColor = AppState.quartetSettings?.sets?.[group]?.color || '#d4af37';
+    // Mytologie-specific defaults
+    const ms = AppState.mythologySettings || {};
+    const defaultBadgeText   = ms.defaultBadgeTexts?.[group]   ?? '';
+    const defaultBadgeBorder = ms.badgeBorderColors?.[group]   ?? innerColor;
+    const statBoxBorderW     = (typeof ms.statBoxBorderWidth === 'number') ? ms.statBoxBorderWidth : 2.8;
+
+    // Propaguj barvu do CSS variables (var(--myth-color))
+    cardEl.style.setProperty('--myth-color', innerColor);
+    // v2: rozšířená nastavení (rámeček, velikosti, posun name patche)
+    cardEl.style.setProperty('--myth-inner-w',     `${ms.innerBorderWidth  ?? 6}px`);
+    cardEl.style.setProperty('--myth-inner-inset', `${ms.innerBorderInset  ?? 0}px`);
+    cardEl.style.setProperty('--myth-stat-l-mul', String(ms.statLabelSize  ?? 1));
+    cardEl.style.setProperty('--myth-stat-v-mul', String(ms.statValueSize  ?? 1));
+    cardEl.style.setProperty('--myth-name-x',      `${ms.namePatchOffsetX  ?? 0}%`);
+    cardEl.style.setProperty('--myth-name-y',      `${ms.namePatchOffsetY  ?? 0}%`);
+    // v3: stat-box layout + výška name patche
+    cardEl.style.setProperty('--myth-stat-gap',    `${ms.statBoxGap        ?? 3}%`);
+    cardEl.style.setProperty('--myth-stat-box-h',  `${ms.statBoxHeight     ?? 100}%`);
+    cardEl.style.setProperty('--myth-name-h',      `${ms.namePatchHeight   ?? 14}%`);
+    // v4: pohyb ID badge (vlevo nahoře)
+    cardEl.style.setProperty('--myth-id-x',        `${ms.idBadgeOffsetX    ?? 0}%`);
+    cardEl.style.setProperty('--myth-id-y',        `${ms.idBadgeOffsetY    ?? 0}%`);
+    // v5: velikost rohových badge (id + origin) — multiplier, padding em-based škáluje s fontem
+    cardEl.style.setProperty('--myth-corner-mul',  String(ms.cornerBadgeSize ?? 1));
+
+    // 1) Vnitřní barevný rámeček
+    const innerBorder = document.createElement('div');
+    innerBorder.className = 'myth-card-inner-border';
+    cardEl.appendChild(innerBorder);
+
+    // 1b) ID badge vlevo nahoře (např. „1A") — samostatný element s pohybem X/Y
+    const idBadge = document.createElement('div');
+    idBadge.className = 'myth-id-badge';
+    idBadge.style.fontFamily = fontFamily;
+    idBadge.innerText = subStr;
+    cardEl.appendChild(idBadge);
+
+    // 2) Origin badge (s případným per-card override)
+    const override = data.badgeOverride;
+    const badgeText  = (override && typeof override.text === 'string')        ? override.text        : defaultBadgeText;
+    const badgeColor = (override && typeof override.borderColor === 'string') ? override.borderColor : defaultBadgeBorder;
+    if (badgeText && badgeText.trim() !== '') {
+        const badge = document.createElement('div');
+        badge.className = 'myth-origin-badge';
+        // Per-badge barva přes lokální custom property (přepíše inheritované --myth-color)
+        badge.style.setProperty('--myth-color', badgeColor);
+        badge.style.fontFamily = fontFamily;
+        badge.innerText = badgeText;
+        cardEl.appendChild(badge);
+    }
+
+    // 3) Name patch (ID + jméno + subtitle)
+    const namePatch = document.createElement('div');
+    namePatch.className = 'myth-name-patch';
+
+    const idName = document.createElement('h1');
+    idName.className = 'myth-id-name';
+    idName.style.fontFamily = fontFamily;
+    const nameText = (data.name || '').trim();
+    // v4: ID karty je teď samostatný myth-id-badge vlevo nahoře.
+    // Tady zůstává jen čisté jméno; pokud uživatel jméno nevyplnil, zobrazíme prázdno.
+    idName.innerText = nameText;
+    namePatch.appendChild(idName);
+
+    const subtitle = (data.subtitle || '').trim();
+    if (subtitle) {
+        const sub = document.createElement('div');
+        sub.className = 'myth-subtitle';
+        sub.style.fontFamily = fontFamily;
+        sub.innerText = subtitle;
+        namePatch.appendChild(sub);
+    }
+    cardEl.appendChild(namePatch);
+
+    // 4) Stats patch (respektuje hideStats sdílené s klasikou)
+    if (hideStats) return;
+
+    const statsPatch = document.createElement('div');
+    statsPatch.className = 'myth-stats-patch';
+    const statsGrid = document.createElement('div');
+    statsGrid.className = 'myth-stats-grid';
+
+    for (let i = 0; i < 4; i++) {
+        const box = document.createElement('div');
+        box.className = 'myth-stat-box';
+        box.style.borderWidth = `${statBoxBorderW}px`;
+
+        const l = document.createElement('span');
+        l.className = 'myth-stat-l';
+        l.style.fontFamily = fontFamily;
+        l.innerText = attrNames[i] || `Atribut ${i+1}`;
+
+        const v = document.createElement('span');
+        v.className = 'myth-stat-v';
+        v.style.fontFamily = fontFamily;
+        const rawV = data.stats?.[i];
+        v.innerText = (rawV !== undefined && rawV !== null && rawV !== '') ? rawV : '-';
+
+        box.appendChild(l);
+        box.appendChild(v);
+        statsGrid.appendChild(box);
+    }
+    statsPatch.appendChild(statsGrid);
+    cardEl.appendChild(statsPatch);
 }
 
 // --- LAYOUT HANDLERS ---
@@ -1368,13 +1498,25 @@ function renderUIFromState() {
                 }
             }
 
-            // Sync Kvarteta data if mode is quartet
-            if (AppState.gameMode === 'quartet') {
-                const qd = card.quartetData || { name: "", description: "", stats: ["", "", "", ""] };
+            // Sync Kvarteta data — sdílené i pro quartet_mythology
+            if (AppState.gameMode === 'quartet' || AppState.gameMode === 'quartet_mythology') {
+                const qd = card.quartetData || { name: "", description: "", stats: ["", "", "", ""], subtitle: "", badgeOverride: null };
                 setVal('ind-q-name', qd.name);
                 setVal('ind-q-desc', qd.description);
                 for(let i=0; i<4; i++) {
                     setVal(`ind-q-stat${i}`, qd.stats[i] || '');
+                }
+                // Mytologie-specific per-card sync
+                if (AppState.gameMode === 'quartet_mythology') {
+                    setVal('ind-q-subtitle', qd.subtitle || '');
+                    const hasOverride = !!qd.badgeOverride;
+                    setChecked('ind-q-badge-toggle', hasOverride);
+                    const detailBox = document.getElementById('ind-q-badge-detail');
+                    if (detailBox) detailBox.style.display = hasOverride ? 'block' : 'none';
+                    if (hasOverride) {
+                        setVal('ind-q-badge-text',   qd.badgeOverride.text || '');
+                        setVal('ind-q-badge-border', qd.badgeOverride.borderColor || '#d4af37');
+                    }
                 }
             }
 
@@ -1472,6 +1614,67 @@ function renderUIFromState() {
         updateQuartetGroupColorUI();
     }
 
+    // 8b. MYTOLOGIE GLOBAL UI
+    if (AppState.gameMode === 'quartet_mythology') {
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+        for (let i = 0; i < 4; i++) {
+            setVal(`myth-attr-${i}`, AppState.quartetSettings.attributeNames?.[i] || '');
+        }
+        setVal('mythology-font-family', AppState.quartetSettings.fontFamily || "'Cinzel', serif");
+        setChecked('mythology-hide-stats',   !!AppState.quartetSettings.hideStats);
+        setChecked('mythology-hide-overlay', !!AppState.quartetSettings.hideOverlay);
+        setVal('mythology-stat-border-w', AppState.mythologySettings?.statBoxBorderWidth ?? 2.8);
+
+        // v2: layout & velikosti
+        const ms = AppState.mythologySettings || {};
+        const iw  = ms.innerBorderWidth  ?? 6;
+        const ii  = ms.innerBorderInset  ?? 0;
+        const sls = ms.statLabelSize     ?? 1.0;
+        const svs = ms.statValueSize     ?? 1.0;
+        const nx  = ms.namePatchOffsetX  ?? 0;
+        const ny  = ms.namePatchOffsetY  ?? 0;
+        setVal('mythology-inner-w',     iw);
+        setVal('mythology-inner-inset', ii);
+        setVal('mythology-stat-l-size', sls);
+        setVal('mythology-stat-v-size', svs);
+        setVal('mythology-name-x',      nx);
+        setVal('mythology-name-y',      ny);
+        // Sync value badges
+        updateValueBadge('mythology-inner-w',     iw);
+        updateValueBadge('mythology-inner-inset', ii);
+        updateValueBadge('mythology-stat-l-size', sls + '×');
+        updateValueBadge('mythology-stat-v-size', svs + '×');
+        updateValueBadge('mythology-name-x',      nx + '%');
+        updateValueBadge('mythology-name-y',      ny + '%');
+
+        // v3: stat-box gap/height + výška name patche
+        const sg  = ms.statBoxGap        ?? 3;
+        const sbh = ms.statBoxHeight     ?? 100;
+        const nh  = ms.namePatchHeight   ?? 14;
+        setVal('mythology-stat-gap',   sg);
+        setVal('mythology-stat-box-h', sbh);
+        setVal('mythology-name-h',     nh);
+        updateValueBadge('mythology-stat-gap',   sg  + '%');
+        updateValueBadge('mythology-stat-box-h', sbh + '%');
+        updateValueBadge('mythology-name-h',     nh  + '%');
+
+        // v4: posun ID badge (vlevo nahoře)
+        const ix = ms.idBadgeOffsetX ?? 0;
+        const iy = ms.idBadgeOffsetY ?? 0;
+        setVal('mythology-id-x', ix);
+        setVal('mythology-id-y', iy);
+        updateValueBadge('mythology-id-x', ix + '%');
+        updateValueBadge('mythology-id-y', iy + '%');
+
+        // v5: velikost rohových badge (id + origin)
+        const cbs = ms.cornerBadgeSize ?? 1.0;
+        setVal('mythology-corner-size', cbs);
+        updateValueBadge('mythology-corner-size', cbs + '×');
+
+        updateMythologyGroupColorUI();
+    }
+
     // 9. GLOBÁLNÍ TEXT PO HODNOTĚ (jen pro režim hracích karet, jinak panel skrýt)
     syncTextValuePanel(setVal, setChecked);
     syncSuitTextColorPanel(setVal);
@@ -1562,30 +1765,67 @@ function importKvartetaJSON(event) {
             const parsed = JSON.parse(e.target.result);
             if (!Array.isArray(parsed)) throw new Error("JSON musí být pole objektů");
             
+            const isMyth = (AppState.gameMode === 'quartet_mythology');
+            // Klíče, které nikdy nepatří mezi 4 statistiky:
+            const reservedKeys = new Set([
+                'Jméno','Name','name',
+                'Český popis','Popis','Description','description',
+                'Skupina','Group','#','id','ID','Id',
+                // Mytologie metadata
+                'subtitle','Subtitle','Podtitul',
+                'origin','Origin','Původ',
+                'color','Color','Barva',
+                'img','Image','image'
+            ]);
+
             let cardIndex = 0;
             // Iterate over all active cards and populate data sequentially
             AppState.cards.forEach(card => {
                 if (cardIndex < parsed.length && card.id.startsWith('q_')) {
                     const row = parsed[cardIndex];
                     if (!card.quartetData) {
-                        card.quartetData = {name: "", description: "", stats: ["", "", "", ""]};
+                        card.quartetData = {name: "", description: "", stats: ["", "", "", ""], subtitle: "", badgeOverride: null};
                     }
-                    
-                    card.quartetData.name = row['Jméno'] || row['Name'] || '';
-                    card.quartetData.description = row['Český popis'] || row['Popis'] || row['Description'] || '';
-                    
-                    // Fetch up to 4 arbitrary numerical stats from the object depending on the keys
+
+                    card.quartetData.name = row['Jméno'] || row['Name'] || row['name'] || '';
+                    card.quartetData.description = row['Český popis'] || row['Popis'] || row['Description'] || row['description'] || '';
+
+                    if (isMyth) {
+                        // Mytologie: subtitle + origin → badge
+                        card.quartetData.subtitle = row['subtitle'] || row['Subtitle'] || row['Podtitul'] || '';
+                        const originText = row['origin'] || row['Origin'] || row['Původ'] || '';
+                        const originColor = row['color'] || row['Color'] || row['Barva'] || '';
+                        if (originText || originColor) {
+                            card.quartetData.badgeOverride = {
+                                text: originText || (card.quartetData.badgeOverride?.text || ''),
+                                borderColor: originColor || (card.quartetData.badgeOverride?.borderColor || '#d4af37')
+                            };
+                        }
+                    }
+
+                    // Fetch up to 4 stats — preferuj klíče dle attributeNames pořadí, fallback enumerate
+                    const attrNames = AppState.quartetSettings.attributeNames || [];
                     let sidx = 0;
-                    for (const [key, value] of Object.entries(row)) {
-                        if (key !== 'Jméno' && key !== 'Name' && key !== 'Český popis' && key !== 'Popis' && key !== 'Description' && key !== 'Skupina' && key !== 'Group' && key !== '#') {
-                             if (sidx < 4) {
-                                  card.quartetData.stats[sidx] = value;
-                                  // Update general attribute names if they haven't been customized fully yet (optional enhancement)
-                                  if (cardIndex === 0 && document.getElementById(`quartet-attr-${sidx}`)) {
-                                      AppState.quartetSettings.attributeNames[sidx] = key;
-                                  }
-                                  sidx++;
-                             }
+                    // 1) Pokud máme klíče přesně pojmenované jak attributeNames, vezmi je v pořadí
+                    let usedNamed = false;
+                    if (attrNames.length === 4 && attrNames.every(n => n && Object.prototype.hasOwnProperty.call(row, n))) {
+                        for (let i = 0; i < 4; i++) {
+                            card.quartetData.stats[i] = row[attrNames[i]];
+                        }
+                        usedNamed = true;
+                    }
+                    // 2) Jinak doplň zbylé klíče v pořadí, kromě reserved
+                    if (!usedNamed) {
+                        for (const [key, value] of Object.entries(row)) {
+                            if (reservedKeys.has(key)) continue;
+                            if (sidx < 4) {
+                                card.quartetData.stats[sidx] = value;
+                                // První řádek dává názvy atributů (nepřepisuj, pokud uživatel už má vlastní non-default)
+                                if (cardIndex === 0) {
+                                    AppState.quartetSettings.attributeNames[sidx] = key;
+                                }
+                                sidx++;
+                            }
                         }
                     }
                     cardIndex++;
@@ -1673,14 +1913,150 @@ function updateActiveQuartetData(field, value, statIndex = 0) {
     if (!AppState.activeCardId) return;
     const card = AppState.cards.find(c => c.id === AppState.activeCardId);
     if (!card) return;
-    if (!card.quartetData) card.quartetData = { name: "", description: "", stats: ["", "", "", ""] };
-    
+    if (!card.quartetData) card.quartetData = { name: "", description: "", stats: ["", "", "", ""], subtitle: "", badgeOverride: null };
+
     if (field === 'stats') {
          card.quartetData.stats[statIndex] = value;
     } else {
          card.quartetData[field] = value;
     }
-    
+
+    debouncedSaveState();
+    requestCardRender(card.id);
+}
+
+// === MYTOLOGIE UI HANDLERS ================================================
+// Načte hodnoty vybrané skupiny do mytologie panelu (color, badge text, badge border).
+function updateMythologyGroupColorUI() {
+    const groupSel = document.getElementById('mythology-group-select');
+    if (!groupSel) return;
+    const g = groupSel.value;
+
+    const colorPicker = document.getElementById('mythology-color-picker');
+    const badgeText   = document.getElementById('mythology-badge-text');
+    const badgeBorder = document.getElementById('mythology-badge-border');
+
+    // Barva skupiny — SDÍLENO s klasikou (čteme z quartetSettings.sets)
+    const sharedColor = AppState.quartetSettings?.sets?.[g]?.color || '#d4af37';
+    if (colorPicker) colorPicker.value = sharedColor;
+
+    // Mytologie-specific
+    const ms = AppState.mythologySettings || {};
+    if (badgeText)   badgeText.value   = ms.defaultBadgeTexts?.[g]   || '';
+    if (badgeBorder) badgeBorder.value = ms.badgeBorderColors?.[g]   || sharedColor;
+}
+
+// Změna barvy skupiny v mytologii — zapisuje do SDÍLENÉHO quartetSettings.sets[g].color
+function updateMythologyColor(color) {
+    const groupSel = document.getElementById('mythology-group-select');
+    if (!groupSel) return;
+    const g = groupSel.value;
+    if (!AppState.quartetSettings.sets[g]) {
+        AppState.quartetSettings.sets[g] = { color: '#ffffff', borderWidth: 0, inset: 0, borderRadius: 4 };
+    }
+    AppState.quartetSettings.sets[g].color = color;
+    debouncedSaveState();
+    requestRender();
+}
+
+// Změna mytologie-specific pole skupiny (badgeText, badgeBorderColor)
+function updateMythologyGroupField(field, value) {
+    const groupSel = document.getElementById('mythology-group-select');
+    if (!groupSel) return;
+    const g = groupSel.value;
+    const ms = AppState.mythologySettings || (AppState.mythologySettings = { defaultBadgeTexts: {}, badgeBorderColors: {}, attributePreset: ["Síla","Magie","Stáří","Hrozivost"], statBoxBorderWidth: 2.8 });
+    if (field === 'badgeText') {
+        ms.defaultBadgeTexts = ms.defaultBadgeTexts || {};
+        ms.defaultBadgeTexts[g] = value;
+    } else if (field === 'badgeBorderColor') {
+        ms.badgeBorderColors = ms.badgeBorderColors || {};
+        ms.badgeBorderColors[g] = value;
+    }
+    debouncedSaveState();
+    requestRender();
+}
+
+function updateMythologyStatBorderWidth(value) {
+    const v = parseFloat(value);
+    if (Number.isFinite(v) && v >= 0) {
+        AppState.mythologySettings.statBoxBorderWidth = v;
+        debouncedSaveState();
+        requestRender();
+    }
+}
+
+// Univerzální setter pro v2 numeric pole mytologie (innerBorderWidth/Inset,
+// statLabelSize/statValueSize, namePatchOffsetX/Y).
+function updateMythologyVar(field, value) {
+    const v = parseFloat(value);
+    if (!Number.isFinite(v)) return;
+    if (!AppState.mythologySettings) AppState.mythologySettings = {};
+    AppState.mythologySettings[field] = v;
+    debouncedSaveState();
+    requestRender();
+}
+
+// Atributy SDÍLENO s klasikou — zapisujeme do quartetSettings.attributeNames
+function updateMythologyAttr(index, value) {
+    if (!AppState.quartetSettings.attributeNames) AppState.quartetSettings.attributeNames = ["Síla","Magie","Stáří","Hrozivost"];
+    AppState.quartetSettings.attributeNames[index] = value;
+    debouncedSaveState();
+    requestRender();
+}
+
+function resetMythologyAttrs() {
+    const preset = AppState.mythologySettings?.attributePreset || ["Síla","Magie","Stáří","Hrozivost"];
+    AppState.quartetSettings.attributeNames = preset.slice();
+    // Sync UI inputy
+    for (let i = 0; i < 4; i++) {
+        const el = document.getElementById(`myth-attr-${i}`);
+        if (el) el.value = preset[i] || '';
+    }
+    saveState();
+    requestRender();
+}
+
+// Per-karta badge override toggle (checkbox v individuálním panelu)
+function toggleCardBadgeOverride(enabled) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card) return;
+    if (!card.quartetData) card.quartetData = { name: "", description: "", stats: ["","","",""], subtitle: "", badgeOverride: null };
+
+    const detailBox = document.getElementById('ind-q-badge-detail');
+    if (enabled) {
+        // Inicializuj override z group defaults, aby uživatel viděl výchozí
+        const parts = (card.id || '').split('_');
+        const subStr = parts.length > 1 ? parts[1] : '1A';
+        const g = subStr[0] || '1';
+        const ms = AppState.mythologySettings || {};
+        const groupColor = AppState.quartetSettings?.sets?.[g]?.color || '#d4af37';
+        card.quartetData.badgeOverride = {
+            text: ms.defaultBadgeTexts?.[g] || '',
+            borderColor: ms.badgeBorderColors?.[g] || groupColor
+        };
+        // Sync UI
+        const t = document.getElementById('ind-q-badge-text');
+        const b = document.getElementById('ind-q-badge-border');
+        if (t) t.value = card.quartetData.badgeOverride.text;
+        if (b) b.value = card.quartetData.badgeOverride.borderColor;
+        if (detailBox) detailBox.style.display = 'block';
+    } else {
+        card.quartetData.badgeOverride = null;
+        if (detailBox) detailBox.style.display = 'none';
+    }
+    debouncedSaveState();
+    requestCardRender(card.id);
+}
+
+function updateCardBadgeOverrideField(field, value) {
+    if (!AppState.activeCardId) return;
+    const card = AppState.cards.find(c => c.id === AppState.activeCardId);
+    if (!card || !card.quartetData) return;
+    if (!card.quartetData.badgeOverride) {
+        card.quartetData.badgeOverride = { text: '', borderColor: '#d4af37' };
+    }
+    card.quartetData.badgeOverride[field] = value;
     debouncedSaveState();
     requestCardRender(card.id);
 }
@@ -1852,11 +2228,17 @@ async function performBulkImport() {
         // 3) Aplikovat na karty
         const reserved = new Set([
             'ID', 'Id', 'id',
-            'Jméno', 'Name',
-            'Popis', 'Český popis', 'Description',
-            'Skupina', 'Group', '#'
+            'Jméno', 'Name', 'name',
+            'Popis', 'Český popis', 'Description', 'description',
+            'Skupina', 'Group', '#',
+            // Mytologie metadata
+            'subtitle', 'Subtitle', 'Podtitul',
+            'origin', 'Origin', 'Původ',
+            'color', 'Color', 'Barva',
+            'img', 'Image', 'image'
         ]);
 
+        const isMyth = (AppState.gameMode === 'quartet_mythology');
         let csvMatched = 0;
         const csvUnmatched = [];
 
@@ -1869,13 +2251,26 @@ async function performBulkImport() {
                 return;
             }
             if (!card.quartetData) {
-                card.quartetData = { name: '', description: '', stats: ['', '', '', ''] };
+                card.quartetData = { name: '', description: '', stats: ['', '', '', ''], subtitle: '', badgeOverride: null };
             }
-            if (row['Jméno'] || row['Name']) {
-                card.quartetData.name = row['Jméno'] || row['Name'];
+            if (row['Jméno'] || row['Name'] || row['name']) {
+                card.quartetData.name = row['Jméno'] || row['Name'] || row['name'];
             }
-            if (row['Popis'] || row['Český popis'] || row['Description']) {
-                card.quartetData.description = row['Popis'] || row['Český popis'] || row['Description'];
+            if (row['Popis'] || row['Český popis'] || row['Description'] || row['description']) {
+                card.quartetData.description = row['Popis'] || row['Český popis'] || row['Description'] || row['description'];
+            }
+
+            if (isMyth) {
+                const subt = row['subtitle'] || row['Subtitle'] || row['Podtitul'];
+                if (subt) card.quartetData.subtitle = subt;
+                const originText  = row['origin'] || row['Origin'] || row['Původ'];
+                const originColor = row['color']  || row['Color']  || row['Barva'];
+                if (originText || originColor) {
+                    card.quartetData.badgeOverride = {
+                        text: originText || (card.quartetData.badgeOverride?.text || ''),
+                        borderColor: originColor || (card.quartetData.badgeOverride?.borderColor || '#d4af37')
+                    };
+                }
             }
 
             let sidx = 0;
@@ -2094,9 +2489,10 @@ function getImageNaturalSize(dataURL) {
 }
 
 function assignImagesToCards(loaded, mode) {
-    if (mode === 'playing_cards') return assignPlayingCards(loaded);
-    if (mode === 'quartet')       return assignQuartet(loaded);
-    if (mode === 'pexeso')        return assignPexeso(loaded);
+    if (mode === 'playing_cards')     return assignPlayingCards(loaded);
+    if (mode === 'quartet')           return assignQuartet(loaded);
+    if (mode === 'quartet_mythology') return assignQuartet(loaded); // stejné IDs q_1A..q_8D
+    if (mode === 'pexeso')            return assignPexeso(loaded);
     return { assignments: [], unmatched: loaded.map(l => l.name), strategy: 'neznámý režim' };
 }
 
