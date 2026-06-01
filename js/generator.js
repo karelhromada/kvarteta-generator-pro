@@ -670,10 +670,13 @@ function drawMythologyOverlay(cardEl, card) {
     cardEl.style.setProperty('--myth-stat-v-mul', String(ms.statValueSize  ?? 1));
     cardEl.style.setProperty('--myth-name-x',      `${ms.namePatchOffsetX  ?? 0}%`);
     cardEl.style.setProperty('--myth-name-y',      `${ms.namePatchOffsetY  ?? 0}%`);
-    // v3: stat-box layout + výška name patche
+    // v3: stat-box layout
     cardEl.style.setProperty('--myth-stat-gap',    `${ms.statBoxGap        ?? 3}%`);
     cardEl.style.setProperty('--myth-stat-box-h',  `${ms.statBoxHeight     ?? 100}%`);
-    cardEl.style.setProperty('--myth-name-h',      `${ms.namePatchHeight   ?? 14}%`);
+    // v6: auto-výška pruhu (padding kolem textu) + škálovatelné písmo jména/podtitulu
+    cardEl.style.setProperty('--myth-name-pad',    `${ms.namePatchPadding  ?? 2}%`);
+    cardEl.style.setProperty('--myth-name-fs',     String(ms.nameFontSize     ?? 1));
+    cardEl.style.setProperty('--myth-subtitle-fs', String(ms.subtitleFontSize ?? 1));
     // v4: pohyb ID badge (vlevo nahoře)
     cardEl.style.setProperty('--myth-id-x',        `${ms.idBadgeOffsetX    ?? 0}%`);
     cardEl.style.setProperty('--myth-id-y',        `${ms.idBadgeOffsetY    ?? 0}%`);
@@ -1648,16 +1651,24 @@ function renderUIFromState() {
         updateValueBadge('mythology-name-x',      nx + '%');
         updateValueBadge('mythology-name-y',      ny + '%');
 
-        // v3: stat-box gap/height + výška name patche
+        // v3: stat-box gap/height
         const sg  = ms.statBoxGap        ?? 3;
         const sbh = ms.statBoxHeight     ?? 100;
-        const nh  = ms.namePatchHeight   ?? 14;
         setVal('mythology-stat-gap',   sg);
         setVal('mythology-stat-box-h', sbh);
-        setVal('mythology-name-h',     nh);
         updateValueBadge('mythology-stat-gap',   sg  + '%');
         updateValueBadge('mythology-stat-box-h', sbh + '%');
-        updateValueBadge('mythology-name-h',     nh  + '%');
+
+        // v6: odsazení (padding) černého pruhu + velikost písma jména/podtitulu
+        const npad = ms.namePatchPadding ?? 2;
+        const nfs  = ms.nameFontSize     ?? 1.0;
+        const sfs  = ms.subtitleFontSize ?? 1.0;
+        setVal('mythology-name-pad',         npad);
+        setVal('mythology-name-fs',          nfs);
+        setVal('mythology-name-subtitle-fs', sfs);
+        updateValueBadge('mythology-name-pad',         npad + '%');
+        updateValueBadge('mythology-name-fs',          nfs + '×');
+        updateValueBadge('mythology-name-subtitle-fs', sfs + '×');
 
         // v4: posun ID badge (vlevo nahoře)
         const ix = ms.idBadgeOffsetX ?? 0;

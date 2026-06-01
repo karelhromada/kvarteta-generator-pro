@@ -385,11 +385,27 @@
 
                 <div class="control-group">
                     <div class="control-header">
-                        <label>Výška černého pruhu (jméno + podtitul) (%)</label>
-                        <span class="value-badge" id="val-mythology-name-h">14%</span>
+                        <label>Odsazení textu v černém pruhu (%)</label>
+                        <span class="value-badge" id="val-mythology-name-pad">2%</span>
                     </div>
-                    <input type="range" id="mythology-name-h" min="8" max="25" step="0.5" value="14"
-                           oninput="updateMythologyVar('namePatchHeight', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                    <input type="range" id="mythology-name-pad" min="0" max="8" step="0.25" value="2"
+                           oninput="updateMythologyVar('namePatchPadding', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost jména</label>
+                        <span class="value-badge" id="val-mythology-name-fs">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-name-fs" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('nameFontSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
+                </div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <label>Velikost podtitulu</label>
+                        <span class="value-badge" id="val-mythology-name-subtitle-fs">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-name-subtitle-fs" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('subtitleFontSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
                 </div>
                 <div class="control-group">
                     <div class="control-header">

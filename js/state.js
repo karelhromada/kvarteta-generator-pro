@@ -152,7 +152,11 @@ let AppState = {
         // v3: stat-box layout + fix přesahu jména
         statBoxGap: 3,          // % (mezera mezi 4 boxy v gridu)
         statBoxHeight: 100,     // % výšky patche (100 = vyplnit, méně = box vycentrován v patchi)
-        namePatchHeight: 14,    // % výšky karty (předtím fix 11 — bylo malé)
+        namePatchHeight: 14,    // % výšky karty (deprecated — pruh se teď auto-sizuje dle obsahu)
+        // v6: auto-výška černého pruhu dle obsahu + škálovatelné písmo jména/podtitulu
+        namePatchPadding: 2,    // % vnitřní odsazení (padding) černého pruhu kolem textu
+        nameFontSize: 1.0,      // multiplier nad clamp() pro jméno
+        subtitleFontSize: 1.0,  // multiplier nad clamp() pro podtitul
         // v4: ID karty (číslo+hodnota, např. „1A") jako samostatný badge vlevo nahoře
         idBadgeOffsetX: 0,      // % (kladné = doprava, záporné = doleva)
         idBadgeOffsetY: 0,      // % (kladné = dolů, záporné = nahoru)

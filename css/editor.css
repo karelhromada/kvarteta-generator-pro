@@ -806,7 +806,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
     top:  calc(61.5% + var(--myth-name-y, 0%));
     left: calc(10%   + var(--myth-name-x, 0%));
     width: 80%;
-    height: var(--myth-name-h, 14%);
+    height: auto;
+    padding: var(--myth-name-pad, 2%) 6%;
+    box-sizing: border-box;
     background: #000;
     z-index: 5;
     display: flex;
@@ -821,8 +823,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
     color: var(--myth-color, #d4af37);
     letter-spacing: 2px;
     margin: 0;
-    white-space: nowrap;
-    font-size: clamp(9px, 3.2vw, 26px);
+    white-space: normal;
+    overflow-wrap: break-word;
+    font-size: calc(clamp(9px, 3.2vw, 26px) * var(--myth-name-fs, 1));
     line-height: 1;
     text-align: center;
 }
@@ -833,7 +836,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     color: #cbd5e1;
     opacity: 0.9;
     margin: 3% 0 0 0;
-    font-size: clamp(6px, 1.5vw, 12px);
+    font-size: calc(clamp(6px, 1.5vw, 12px) * var(--myth-subtitle-fs, 1));
     line-height: 1.1;
     text-align: center;
     padding: 0 4%;
