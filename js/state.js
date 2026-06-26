@@ -108,6 +108,7 @@ let AppState = {
     // --- REŽIM KVARTETA (v1.5) ---
     quartetSettings: {
         attributeNames: ["Výška", "Váha", "Věk", "Síla"], // Výchozí názvy
+        statCount: 4, // Počet zobrazených vlastností na kartě (1–4)
         globalText: {
             name: { font: 'Inter', size: 14, color: '#ffffff', x: 31.5, y: 72, align: 'center', weight: '700' },
             description: { font: 'Inter', size: 9, color: '#cccccc', x: 31.5, y: 78, align: 'center', italic: true },
@@ -132,6 +133,7 @@ let AppState = {
     // hideStats a hideOverlay přes ČTENÍ. Sem patří jen mytologie-specifické věci.
     mythologySettings: {
         attributePreset: ["Síla", "Magie", "Stáří", "Hrozivost"],
+        statCount: 4, // Počet zobrazených vlastností na kartě (1–4) — nezávislé na klasice
         defaultBadgeTexts: {
             "1": "ŘECKÁ MYTOLOGIE",   "2": "SEVERSKÁ MYTOLOGIE", "3": "EGYPTSKÁ MYTOLOGIE",
             "4": "SLOVANSKÁ MYTOLOGIE","5": "ŘÍMSKÁ MYTOLOGIE",   "6": "KELTSKÁ MYTOLOGIE",
@@ -498,7 +500,9 @@ function migrateMissingState() {
             idBadgeOffsetX: 0,
             idBadgeOffsetY: 0,
             // v5
-            cornerBadgeSize: 1.0
+            cornerBadgeSize: 1.0,
+            // v7
+            statCount: 4
         };
     } else {
         const ms = AppState.mythologySettings;
@@ -522,6 +526,13 @@ function migrateMissingState() {
         if (typeof ms.idBadgeOffsetY    !== 'number') ms.idBadgeOffsetY    = 0;
         // v5 fallback
         if (typeof ms.cornerBadgeSize   !== 'number') ms.cornerBadgeSize   = 1.0;
+        // v7 fallback
+        if (typeof ms.statCount         !== 'number') ms.statCount         = 4;
+    }
+
+    // Klasický kvartet — počet zobrazených vlastností (starší projekty)
+    if (AppState.quartetSettings && typeof AppState.quartetSettings.statCount !== 'number') {
+        AppState.quartetSettings.statCount = 4;
     }
 
     // Karty mohou mít chybějící subtitle/badgeOverride po načtení staršího projektu
