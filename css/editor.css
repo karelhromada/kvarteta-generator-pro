@@ -861,7 +861,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     width: 100%;
     height: 100%;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(var(--myth-stat-count, 4), 1fr);
     gap: var(--myth-stat-gap, 3%);
     align-items: center;
 }

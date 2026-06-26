@@ -524,20 +524,21 @@ function drawQuartetOverlay(cardEl, card) {
     
     idBadge.style.fontFamily = fontFamily;
 
-    // 4 Stats in Hexagons
+    // Stats in Hexagons — počet řízen statCount (1–4)
     if (!hideStats) {
+        const statCount = getQuartetStatCount();
         const positions = ['pos-tl', 'pos-tr', 'pos-bl', 'pos-br'];
         const attrNames = AppState.quartetSettings.attributeNames || ["Výška", "Váha", "Věk", "Síla"];
-        
+
         const statsWrapper = document.createElement('div');
         statsWrapper.className = `layout-wrapper-${statLayout}`;
-        
+
         if (statLayout === 'bottom-row' || statLayout === 'left-column' || statLayout === 'right-column') {
             statsWrapper.style.gap = `${statSpacing}px`;
         }
         statsWrapper.style.textRendering = 'optimizeLegibility';
 
-        for(let i=0; i<4; i++) {
+        for(let i=0; i<statCount; i++) {
             const hexContainer = document.createElement('div');
             let posClass = '';
             if (statLayout === 'corners') posClass = positions[i];
@@ -682,6 +683,9 @@ function drawMythologyOverlay(cardEl, card) {
     cardEl.style.setProperty('--myth-id-y',        `${ms.idBadgeOffsetY    ?? 0}%`);
     // v5: velikost rohových badge (id + origin) — multiplier, padding em-based škáluje s fontem
     cardEl.style.setProperty('--myth-corner-mul',  String(ms.cornerBadgeSize ?? 1));
+    // v7: počet zobrazených vlastností → počet sloupců gridu stat-boxů
+    const statCount = getQuartetStatCount();
+    cardEl.style.setProperty('--myth-stat-count',  String(statCount));
 
     // 1) Vnitřní barevný rámeček
     const innerBorder = document.createElement('div');
@@ -740,7 +744,7 @@ function drawMythologyOverlay(cardEl, card) {
     const statsGrid = document.createElement('div');
     statsGrid.className = 'myth-stats-grid';
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < statCount; i++) {
         const box = document.createElement('div');
         box.className = 'myth-stat-box';
         box.style.borderWidth = `${statBoxBorderW}px`;
@@ -1590,6 +1594,7 @@ function renderUIFromState() {
         for(let i=0; i<4; i++) {
             setVal(`quartet-attr-${i}`, AppState.quartetSettings.attributeNames[i] || '');
         }
+        setVal('quartet-stat-count', AppState.quartetSettings.statCount || 4);
         setVal('quartet-layout-x', AppState.quartetSettings.layout?.offsetX ?? 2);
         setVal('quartet-layout-y', AppState.quartetSettings.layout?.offsetY ?? 2);
         
@@ -1624,6 +1629,7 @@ function renderUIFromState() {
         for (let i = 0; i < 4; i++) {
             setVal(`myth-attr-${i}`, AppState.quartetSettings.attributeNames?.[i] || '');
         }
+        setVal('myth-stat-count', AppState.mythologySettings?.statCount || 4);
         setVal('mythology-font-family', AppState.quartetSettings.fontFamily || "'Cinzel', serif");
         setChecked('mythology-hide-stats',   !!AppState.quartetSettings.hideStats);
         setChecked('mythology-hide-overlay', !!AppState.quartetSettings.hideOverlay);
@@ -1689,6 +1695,9 @@ function renderUIFromState() {
     // 9. GLOBÁLNÍ TEXT PO HODNOTĚ (jen pro režim hracích karet, jinak panel skrýt)
     syncTextValuePanel(setVal, setChecked);
     syncSuitTextColorPanel(setVal);
+
+    // 10. Viditelnost kolonek vlastností dle aktivního statCount
+    applyStatCountVisibility();
 
     requestRender();
 }
@@ -1854,6 +1863,53 @@ function importKvartetaJSON(event) {
     reader.readAsText(file);
     // Reset input
     event.target.value = null;
+}
+
+// Aktivní počet zobrazených vlastností podle režimu (klasika vs mytologie),
+// ošetřený na rozsah 1–4. Starší projekty bez statCount fallbackují na 4.
+function getQuartetStatCount() {
+    const raw = (AppState.gameMode === 'quartet_mythology')
+        ? AppState.mythologySettings?.statCount
+        : AppState.quartetSettings?.statCount;
+    const n = parseInt(raw, 10);
+    return (n >= 1 && n <= 4) ? n : 4;
+}
+
+// Skryje/zobrazí kolonky v editoru tak, aby odpovídaly aktivnímu počtu vlastností.
+// Řídí se aktivním režimem; v daný okamžik je vždy viditelný jen panel aktivního režimu.
+function applyStatCountVisibility() {
+    const count = getQuartetStatCount();
+    for (let i = 0; i < 4; i++) {
+        const show = i < count ? '' : 'none';
+        // Hodnoty vlastností u aktivní karty (sdílený editor)
+        const stat = document.getElementById(`ind-q-stat${i}`);
+        if (stat) stat.style.display = show;
+        // Názvy atributů — klasický panel (skryjeme celý řádek)
+        const qa = document.getElementById(`quartet-attr-${i}`);
+        const qaRow = qa && qa.closest('.control-row');
+        if (qaRow) qaRow.style.display = show;
+        // Názvy atributů — mytologický panel
+        const ma = document.getElementById(`myth-attr-${i}`);
+        const maRow = ma && ma.closest('.control-row');
+        if (maRow) maRow.style.display = show;
+    }
+}
+
+function updateQuartetStatCount(value) {
+    const n = parseInt(value, 10);
+    AppState.quartetSettings.statCount = (n >= 1 && n <= 4) ? n : 4;
+    applyStatCountVisibility();
+    debouncedSaveState();
+    requestRender();
+}
+
+function updateMythologyStatCount(value) {
+    const n = parseInt(value, 10);
+    if (!AppState.mythologySettings) AppState.mythologySettings = {};
+    AppState.mythologySettings.statCount = (n >= 1 && n <= 4) ? n : 4;
+    applyStatCountVisibility();
+    debouncedSaveState();
+    requestRender();
 }
 
 function updateQuartetConfig(prop, value) {

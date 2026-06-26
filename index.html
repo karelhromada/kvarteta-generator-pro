@@ -124,7 +124,16 @@
                 <div class="control-row"><input type="text" id="quartet-attr-1" value="Váha" onchange="updateQuartetAttr(1, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
                 <div class="control-row"><input type="text" id="quartet-attr-2" value="Věk" onchange="updateQuartetAttr(2, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
                 <div class="control-row"><input type="text" id="quartet-attr-3" value="Síla" onchange="updateQuartetAttr(3, this.value)" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;"></div>
-                
+                <div class="control-row" style="margin-top:8px;">
+                    <label>Počet zobrazených vlastností</label>
+                    <select id="quartet-stat-count" class="dropdown" onchange="updateQuartetStatCount(this.value)">
+                        <option value="4">4 (všechny)</option>
+                        <option value="3">3</option>
+                        <option value="2">2</option>
+                        <option value="1">1</option>
+                    </select>
+                </div>
+
                 <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Herní Systém a Typografie</h4>
                 <div class="control-row">
                     <label>Nechci mít na kvartetech vlastnosti</label>
@@ -362,6 +371,15 @@
                 <div class="control-row"><input type="text" id="myth-attr-3" placeholder="Hrozivost" style="width:100%; border:1px solid var(--border); background:var(--bg-app); color:#fff; padding:4px;" onchange="updateMythologyAttr(3, this.value)"></div>
                 <div class="control-row" style="margin-top:8px;">
                     <button type="button" class="action-btn small" onclick="resetMythologyAttrs()" style="width:100%;">Resetovat atributy (Síla / Magie / Stáří / Hrozivost)</button>
+                </div>
+                <div class="control-row" style="margin-top:8px;">
+                    <label>Počet zobrazených vlastností</label>
+                    <select id="myth-stat-count" class="dropdown" onchange="updateMythologyStatCount(this.value)">
+                        <option value="4">4 (všechny)</option>
+                        <option value="3">3</option>
+                        <option value="2">2</option>
+                        <option value="1">1</option>
+                    </select>
                 </div>
 
                 <h4 style="font-size:10px; color:var(--text); margin-top:20px; margin-bottom:10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Layout a velikosti</h4>
