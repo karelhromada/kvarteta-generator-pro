@@ -487,16 +487,18 @@ function drawQuartetOverlay(cardEl, card) {
     const useSetColorStatName = AppState.quartetSettings.useSetColorStatName || false;
     const useSetColorStatValue = AppState.quartetSettings.useSetColorStatValue || false;
     const useSetColorStatBorder = AppState.quartetSettings.useSetColorStatBorder || false;
-    const idOffsetX = AppState.quartetSettings.idOffsetX ?? 50;
-    const idOffsetY = AppState.quartetSettings.idOffsetY ?? 2;
-    const nameOffsetX = AppState.quartetSettings.nameOffsetX ?? 50;
-    const nameOffsetY = AppState.quartetSettings.nameOffsetY ?? 12;
-    const descOffsetX = AppState.quartetSettings.descOffsetX ?? 50;
-    const descOffsetY = AppState.quartetSettings.descOffsetY ?? 5;
+    // Umístění a velikosti — globál sloučený s případným přepisem karty (js/card-layout.js)
+    const lay = getCardLayout(card);
+    const idOffsetX = lay.idOffsetX ?? 50;
+    const idOffsetY = lay.idOffsetY ?? 2;
+    const nameOffsetX = lay.nameOffsetX ?? 50;
+    const nameOffsetY = lay.nameOffsetY ?? 12;
+    const descOffsetX = lay.descOffsetX ?? 50;
+    const descOffsetY = lay.descOffsetY ?? 5;
     // Velikosti — výchozí hodnoty odpovídají CSS (.kvarteta-id-badge / -card-name / -card-desc)
-    const idBadgeSize  = parseFloat(AppState.quartetSettings.idBadgeSize)  || 1.0;
-    const nameFontSize = parseFloat(AppState.quartetSettings.nameFontSize) || 1.3;
-    const descFontSize = parseFloat(AppState.quartetSettings.descFontSize) || 0.6;
+    const idBadgeSize  = parseFloat(lay.idBadgeSize)  || 1.0;
+    const nameFontSize = parseFloat(lay.nameFontSize) || 1.3;
+    const descFontSize = parseFloat(lay.descFontSize) || 0.6;
 
     idBadge.style.borderColor = cssColor;
     idBadge.style.color = useSetColorId ? cssColor : '#fff';
@@ -664,8 +666,8 @@ function drawMythologyOverlay(cardEl, card) {
 
     // Barva skupiny — sdíleno s klasikou
     const innerColor = AppState.quartetSettings?.sets?.[group]?.color || '#d4af37';
-    // Mytologie-specific defaults
-    const ms = AppState.mythologySettings || {};
+    // Mytologie-specific defaults (globál sloučený s případným přepisem karty)
+    const ms = getCardLayout(card);
     const defaultBadgeText   = ms.defaultBadgeTexts?.[group]   ?? '';
     const defaultBadgeBorder = ms.badgeBorderColors?.[group]   ?? innerColor;
     const statBoxBorderW     = (typeof ms.statBoxBorderWidth === 'number') ? ms.statBoxBorderWidth : 2.8;
@@ -1535,6 +1537,7 @@ function renderUIFromState() {
                         setVal('ind-q-badge-border', qd.badgeOverride.borderColor || '#d4af37');
                     }
                 }
+                syncCardLayoutControls(card);
             }
 
             // Sync sekce VLASTNÍ TEXT (per-karta override) — viditelná na všech kartách.
