@@ -101,7 +101,54 @@ function decorateTextField(el, cardId, field) {
     sep.className = 'tf-sep';
     toolbar.appendChild(sep);
     TEXT_ALIGNS.forEach(align => toolbar.appendChild(buildAlignButton(align, align === current)));
+    const sep2 = document.createElement('span');
+    sep2.className = 'tf-sep';
+    toolbar.appendChild(sep2);
+    toolbar.appendChild(buildCenterOnCardButton());
     el.appendChild(toolbar);
+}
+
+// Ikona „na střed karty“: rámeček karty, svislá osa a pole na ní
+function buildCenterOnCardButton() {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = 'Na střed karty';
+    btn.dataset.centerCard = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('width', '13');
+    svg.setAttribute('height', '13');
+    const shapes = [
+        ['rect', { x: 1.5, y: 1.5, width: 13, height: 13, rx: 2, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.3 }],
+        ['line', { x1: 8, y1: 0, x2: 8, y2: 16, stroke: 'currentColor', 'stroke-width': 1, 'stroke-dasharray': '1.5 1.5' }],
+        ['rect', { x: 4.5, y: 6, width: 7, height: 4, rx: 1, fill: 'currentColor' }]
+    ];
+    shapes.forEach(([tag, attrs]) => {
+        const node = document.createElementNS(ns, tag);
+        Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+        svg.appendChild(node);
+    });
+    btn.appendChild(svg);
+    return btn;
+}
+
+// Vybrané pole na střed karty (sada, nebo karta s vlastním rozvržením)
+function centerTextFieldOnCard() {
+    if (!textSelection) return;
+    const card = AppState.cards.find(c => c.id === textSelection.cardId);
+    if (!card) return;
+    writeTextFieldValues(card.id, { [TEXT_FIELDS[textSelection.field].x]: TEXT_FIELD_CARD_CENTER });
+    saveState();
+    renderUIFromState();
+}
+
+// Tlačítko v globálním panelu: pole na střed karty pro celou sadu
+function centerQuartetFieldOnCard(field) {
+    if (!TEXT_FIELDS[field]) return;
+    AppState.quartetSettings = { ...AppState.quartetSettings, [TEXT_FIELDS[field].x]: TEXT_FIELD_CARD_CENTER };
+    saveState();
+    renderUIFromState();
 }
 
 function buildAlignButton(align, active) {
@@ -215,6 +262,7 @@ document.addEventListener('mousedown', (e) => {
     if (fontBtn) { changeTextFieldFont(parseInt(fontBtn.dataset.fontStep, 10)); return; }
     const alignBtn = e.target.closest('[data-align]');
     if (alignBtn) { changeTextFieldAlign(alignBtn.dataset.align); return; }
+    if (e.target.closest('[data-center-card]')) { centerTextFieldOnCard(); return; }
 
     const cardId = fieldEl.dataset.cardId;
     const field = fieldEl.dataset.textField;
