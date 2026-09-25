@@ -569,6 +569,7 @@ function drawQuartetOverlay(cardEl, card) {
                 const b = parseInt(hex.substring(4, 6), 16);
                 hexContainer.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${statOpacity})`;
                 if (useSetColorStatBorder) {
+                    // u SVG tvarů (šestiúhelník, štít) jde barva do tahu SVG — viz níže
                     hexContainer.style.borderColor = cssColor;
                 }
             }
