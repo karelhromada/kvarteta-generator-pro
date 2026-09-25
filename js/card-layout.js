@@ -136,10 +136,15 @@ function buildCardCenterButton(f, input, badge) {
     btn.style.marginTop = '4px';
     btn.innerText = '⇔ Na střed karty';
     btn.addEventListener('click', () => {
+        const card = getActiveCard();
+        const mode = getCardLayoutMode();
+        if (!card || !mode || !card.quartetData || !card.quartetData[mode.store]) return;
         input.value = TEXT_FIELD_CARD_CENTER;
         badge.innerText = String(TEXT_FIELD_CARD_CENTER);
-        updateCardLayoutField(f.key, TEXT_FIELD_CARD_CENTER);
+        // Jednorázové kliknutí = jeden krok historie hned (ne debounce jako u posuvníku)
+        card.quartetData[mode.store] = { ...card.quartetData[mode.store], [f.key]: TEXT_FIELD_CARD_CENTER };
         saveState();
+        requestCardRender(card.id);
     });
     return btn;
 }

@@ -687,7 +687,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 .center-card-btn:hover { border-color: var(--accent); color: var(--accent); }
 .tf-sep { width: 1px; margin: 2px 3px; background: rgba(255,255,255,0.25); }
-.tf-toolbar button[data-align] { display: flex; align-items: center; padding: 1px 4px; }
+.tf-toolbar button[data-align],
+.tf-toolbar button[data-center-card] { display: flex; align-items: center; padding: 1px 4px; }
 .tf-toolbar button.active { background: rgba(14,165,233,0.45); }
 .tf-toolbar button { background: none; border: none; color: #fff; cursor: pointer; padding: 1px 6px; font: inherit; border-radius: 3px; }
 .tf-toolbar button:hover { background: #0ea5e9; }
