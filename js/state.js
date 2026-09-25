@@ -557,6 +557,14 @@ function migrateMissingState() {
         if (typeof ms.statCount         !== 'number') ms.statCount         = 4;
     }
 
+    // Klasický kvartet — pole názvu / popisku symetricky na kartě (starší projekty bez zarovnání)
+    AppState.quartetSettings = withSymmetricTextFields(AppState.quartetSettings);
+    if (Array.isArray(AppState.cards)) {
+        AppState.cards = AppState.cards.map(c => (c && c.quartetData && c.quartetData.layoutOverride)
+            ? { ...c, quartetData: { ...c.quartetData, layoutOverride: withSymmetricTextFields(c.quartetData.layoutOverride) } }
+            : c);
+    }
+
     // Klasický kvartet — počet zobrazených vlastností (starší projekty)
     if (AppState.quartetSettings && typeof AppState.quartetSettings.statCount !== 'number') {
         AppState.quartetSettings.statCount = 4;

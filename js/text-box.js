@@ -27,9 +27,20 @@ function cardCenterValues(field) {
     return { [k.x]: TEXT_FIELD_CARD_CENTER, [k.align]: 'center' };
 }
 
-// Zarovnání textu jako ve Wordu; bez nastavení = vlevo (původní vzhled)
+// Zarovnání textu jako ve Wordu; výchozí = na střed (pole i text symetricky na kartě)
 const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'];
-const TEXT_ALIGN_DEFAULT = 'left';
+const TEXT_ALIGN_DEFAULT = 'center';
+
+// Projekty bez uloženého zarovnání (starší / vygenerované JSONy) měly text vlevo a pole
+// často posunuté doprava přes okraj karty, aby text vypadal vycentrovaně. Výchozí stav
+// je teď symetrický: střed pole na střed karty + text na střed. Uložené zarovnání se nemění.
+function withSymmetricTextFields(settings) {
+    if (!settings) return settings;
+    return Object.keys(TEXT_FIELDS).reduce((acc, field) => {
+        const k = TEXT_FIELDS[field];
+        return TEXT_ALIGNS.includes(acc[k.align]) ? acc : { ...acc, ...cardCenterValues(field) };
+    }, settings);
+}
 
 function textFieldAlign(lay, field) {
     const v = lay[TEXT_FIELDS[field].align];
