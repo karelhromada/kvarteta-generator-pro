@@ -18,12 +18,30 @@ const TEXT_FIELDS = {
             defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 }, fontRange: [0.3, 2.0] }
 };
 
-// Střed pole na středu karty (x = střed pole v % šířky karty)
+// „Na střed karty“: střed pole na střed karty (x v % šířky karty) + text zarovnaný na střed.
+// Samotný posun pole nestačí — text zarovnaný vlevo by uskočil a každý název je jinak dlouhý.
 const TEXT_FIELD_CARD_CENTER = 50;
 
-// Zarovnání textu jako ve Wordu; bez nastavení = vlevo (původní vzhled)
+function cardCenterValues(field) {
+    const k = TEXT_FIELDS[field];
+    return { [k.x]: TEXT_FIELD_CARD_CENTER, [k.align]: 'center' };
+}
+
+// Zarovnání textu jako ve Wordu; výchozí = na střed (pole i text symetricky na kartě)
 const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'];
-const TEXT_ALIGN_DEFAULT = 'left';
+const TEXT_ALIGN_DEFAULT = 'center';
+
+// Projekty bez uloženého zarovnání (starší / vygenerované JSONy) měly text vlevo a pole
+// často posunuté doprava přes okraj karty, aby text vypadal vycentrovaně. Výchozí stav
+// je teď symetrický: střed pole na střed karty + text na střed. Uložené zarovnání se nemění.
+// INVARIANT: kdo zapisuje *OffsetX, musí zapsat i *Align — jinak se X při dalším otevření vrátí na 50.
+function withSymmetricTextFields(settings) {
+    if (!settings) return settings;
+    return Object.keys(TEXT_FIELDS).reduce((acc, field) => {
+        const k = TEXT_FIELDS[field];
+        return TEXT_ALIGNS.includes(acc[k.align]) ? acc : { ...acc, ...cardCenterValues(field) };
+    }, settings);
+}
 
 function textFieldAlign(lay, field) {
     const v = lay[TEXT_FIELDS[field].align];
@@ -52,7 +70,7 @@ function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, 
     el.style.fontSize = fontSize;
     el.dataset.baseFontSize = fontSize;
     const align = lay[k.align];
-    if (TEXT_ALIGNS.includes(align)) el.style.textAlign = align; // jinak zděděné (vlevo)
+    if (TEXT_ALIGNS.includes(align)) el.style.textAlign = align; // vždy platné po migrateMissingState
 
     const inner = document.createElement('div');
     inner.className = 'kvarteta-text-inner';
