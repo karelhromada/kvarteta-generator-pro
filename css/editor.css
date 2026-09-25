@@ -642,7 +642,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* Rámeček za názvem / popiskem (js/text-box.js) — obtéká text, rezerva v em */
 .kvarteta-text-box {
     display: inline-block;
-    max-width: 100%;
+    max-width: calc(100% + 0.9em); /* + odsazení vlevo i vpravo → text se zalomí stejně jako bez rámečku */
     box-sizing: border-box;
     padding: 0.12em 0.45em;
     margin: -0.12em -0.45em;   /* = padding → text zůstane přesně tam, kde byl bez rámečku */

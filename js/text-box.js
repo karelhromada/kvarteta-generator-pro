@@ -29,4 +29,61 @@ function setTextWithBox(el, text, settings, prefix) {
     box.style.background = hexToRgba(color, alpha);
     box.innerText = text;
     el.replaceChildren(box);
+    scheduleTextBoxFit(box);
+}
+
+// --- Víceřádkový text ---------------------------------------------------------
+// Zalomený inline-block si CSS vždy roztáhne na celou dostupnou šířku. Po vložení
+// do stránky proto změříme nejdelší skutečný řádek a rámeček zúžíme přesně na něj.
+
+const pendingTextBoxes = new Set();
+
+function scheduleTextBoxFit(box) {
+    pendingTextBoxes.add(box);
+    if (pendingTextBoxes.size > 1) return; // snímek už je naplánovaný
+    requestAnimationFrame(() => {
+        const boxes = [...pendingTextBoxes];
+        pendingTextBoxes.clear();
+        boxes.forEach(fitTextBox);
+    });
+}
+
+// Šířky řádků textu v px layoutu (bez vlivu CSS transformací náhledu)
+function measureTextLines(box) {
+    const range = document.createRange();
+    range.selectNodeContents(box);
+    const lines = new Map(); // top řádku → [left, right]
+    [...range.getClientRects()].forEach(r => {
+        if (r.width === 0) return;
+        const key = Math.round(r.top);
+        const [l, rt] = lines.get(key) || [r.left, r.right];
+        lines.set(key, [Math.min(l, r.left), Math.max(rt, r.right)]);
+    });
+    const scale = box.offsetWidth / (box.getBoundingClientRect().width || 1);
+    return [...lines.values()].map(([l, r]) => (r - l) * scale);
+}
+
+function fitTextBox(box) {
+    if (!box.isConnected) return;
+    box.style.width = '';
+    const lines = measureTextLines(box);
+    if (lines.length <= 1) return; // jeden řádek obtéká inline-block sám
+
+    const cs = getComputedStyle(box);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    let width = Math.ceil(Math.max(...lines) + padX) + 1;
+    // Pojistka: užší rámeček nesmí přidat řádek (zaokrouhlení subpixelů)
+    for (let i = 0; i < 4; i++) {
+        box.style.width = `${width}px`;
+        if (measureTextLines(box).length <= lines.length) return;
+        width += 2;
+    }
+    box.style.width = '';
+}
+
+// Po dotažení webových fontů se šířky řádků změní → přeměřit všechny rámečky
+if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => document.querySelectorAll('.kvarteta-text-box').forEach(fitTextBox));
+    document.fonts.addEventListener?.('loadingdone', () =>
+        document.querySelectorAll('.kvarteta-text-box').forEach(fitTextBox));
 }
