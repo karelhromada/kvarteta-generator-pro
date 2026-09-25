@@ -691,6 +691,8 @@ function drawMythologyOverlay(cardEl, card) {
     cardEl.style.setProperty('--myth-id-y',        `${ms.idBadgeOffsetY    ?? 0}%`);
     // v5: velikost rohových badge (id + origin) — multiplier, padding em-based škáluje s fontem
     cardEl.style.setProperty('--myth-corner-mul',  String(ms.cornerBadgeSize ?? 1));
+    // v8: samostatná velikost ID badge (bez hodnoty = jako origin badge)
+    cardEl.style.setProperty('--myth-id-mul',      String(ms.idBadgeSize ?? ms.cornerBadgeSize ?? 1));
     // v7: počet zobrazených vlastností → počet sloupců gridu stat-boxů
     const statCount = getQuartetStatCount();
     cardEl.style.setProperty('--myth-stat-count',  String(statCount));
@@ -1702,10 +1704,13 @@ function renderUIFromState() {
         updateValueBadge('mythology-id-x', ix + '%');
         updateValueBadge('mythology-id-y', iy + '%');
 
-        // v5: velikost rohových badge (id + origin)
+        // v5: velikost origin badge; v8: samostatná velikost ID badge
         const cbs = ms.cornerBadgeSize ?? 1.0;
         setVal('mythology-corner-size', cbs);
         updateValueBadge('mythology-corner-size', cbs + '×');
+        const ibs = ms.idBadgeSize ?? cbs;
+        setVal('mythology-id-size', ibs);
+        updateValueBadge('mythology-id-size', ibs + '×');
 
         updateMythologyGroupColorUI();
     }

@@ -164,7 +164,9 @@ let AppState = {
         idBadgeOffsetY: 0,      // % (kladné = dolů, záporné = nahoru)
         // v5: velikost rohových badge (id + origin) — multiplier nad clamp() font-size,
         // padding škáluje em-based, takže rámeček se „automaticky upraví" s fontem.
-        cornerBadgeSize: 1.0
+        cornerBadgeSize: 1.0,
+        // v8: samostatná velikost ID badge; cornerBadgeSize pak řídí jen origin badge
+        idBadgeSize: 1.0
     },
 
     showSymbols: true,
@@ -517,6 +519,8 @@ function migrateMissingState() {
             idBadgeOffsetY: 0,
             // v5
             cornerBadgeSize: 1.0,
+            // v8
+            idBadgeSize: 1.0,
             // v7
             statCount: 4
         };
@@ -542,6 +546,8 @@ function migrateMissingState() {
         if (typeof ms.idBadgeOffsetY    !== 'number') ms.idBadgeOffsetY    = 0;
         // v5 fallback
         if (typeof ms.cornerBadgeSize   !== 'number') ms.cornerBadgeSize   = 1.0;
+        // v8 fallback — dřív ID sdílelo velikost s origin badge, vzhled zachováme
+        if (typeof ms.idBadgeSize       !== 'number') ms.idBadgeSize       = ms.cornerBadgeSize;
         // v7 fallback
         if (typeof ms.statCount         !== 'number') ms.statCount         = 4;
     }

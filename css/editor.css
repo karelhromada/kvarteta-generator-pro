@@ -793,7 +793,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-weight: 900;
     padding: 0.2em 0.5em;
     border-radius: 4px;
-    font-size: calc(clamp(8px, 2vw, 16px) * var(--myth-corner-mul, 1));
+    font-size: calc(clamp(8px, 2vw, 16px) * var(--myth-id-mul, var(--myth-corner-mul, 1)));
     letter-spacing: 1px;
     white-space: nowrap;
     line-height: 1.1;
