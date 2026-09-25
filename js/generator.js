@@ -1633,8 +1633,9 @@ function renderUIFromState() {
         setVal('quartet-stat-value-offset', AppState.quartetSettings.statValueOffset || 0);
         setVal('quartet-stat-label-offset', AppState.quartetSettings.statLabelOffset || 0);
         setVal('quartet-stat-bg-color', AppState.quartetSettings.statBgColor || '#000000');
-        // Rámeček za názvem / popiskem (js/text-box.js)
+        // Zarovnání + rámeček za názvem / popiskem (js/text-box.js)
         ['name', 'desc'].forEach(prefix => {
+            setVal(`quartet-${prefix}-align`, textFieldAlign(qs, prefix));
             const chk = document.getElementById(`quartet-${prefix}-box`);
             if (chk) chk.checked = !!qs[`${prefix}BoxEnabled`];
             setVal(`quartet-${prefix}-box-color`, qs[`${prefix}BoxColor`] || TEXT_BOX_DEFAULTS.color);

@@ -12,11 +12,20 @@ const TEXT_FIELD_MIN_FONT_PX = 4;
 // Klíče v quartetSettings / layoutOverride a výchozí hodnoty (= původní vzhled).
 // x = střed pole, y = spodní hrana od spodku karty, w/h = rozměr; vše v % karty; h 0 = auto.
 const TEXT_FIELDS = {
-    name: { x: 'nameOffsetX', y: 'nameOffsetY', w: 'nameWidth', h: 'nameHeight', font: 'nameFontSize',
+    name: { x: 'nameOffsetX', y: 'nameOffsetY', w: 'nameWidth', h: 'nameHeight', font: 'nameFontSize', align: 'nameAlign',
             defaults: { x: 50, y: 12, w: 90, h: 0, font: 1.3 }, fontRange: [0.5, 3.0] },
-    desc: { x: 'descOffsetX', y: 'descOffsetY', w: 'descWidth', h: 'descHeight', font: 'descFontSize',
+    desc: { x: 'descOffsetX', y: 'descOffsetY', w: 'descWidth', h: 'descHeight', font: 'descFontSize', align: 'descAlign',
             defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 }, fontRange: [0.3, 2.0] }
 };
+
+// Zarovnání textu jako ve Wordu; bez nastavení = vlevo (původní vzhled)
+const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'];
+const TEXT_ALIGN_DEFAULT = 'left';
+
+function textFieldAlign(lay, field) {
+    const v = lay[TEXT_FIELDS[field].align];
+    return TEXT_ALIGNS.includes(v) ? v : TEXT_ALIGN_DEFAULT;
+}
 
 // Vytvoří pole názvu / popisku (element + vnitřek s textem, případně rámečkem)
 function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, color, boxed = true }) {
@@ -39,6 +48,8 @@ function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, 
     el.style.fontFamily = fontFamily;
     el.style.fontSize = fontSize;
     el.dataset.baseFontSize = fontSize;
+    const align = lay[k.align];
+    if (TEXT_ALIGNS.includes(align)) el.style.textAlign = align; // jinak zděděné (vlevo)
 
     const inner = document.createElement('div');
     inner.className = 'kvarteta-text-inner';
