@@ -1450,6 +1450,16 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Rozvržení jen této karty (velikost + umístění ID, názvu, popisku) — posuvníky staví js/card-layout.js -->
+                    <div id="ind-card-layout" style="padding-top:12px; margin-top:12px; border-top:1px dashed rgba(255,255,255,0.15);">
+                        <h4 style="font-size:10px; color:var(--accent); margin-bottom:10px;">ROZVRŽENÍ — TATO KARTA</h4>
+                        <div class="control-row">
+                            <label>Vlastní velikost a umístění</label>
+                            <input type="checkbox" id="ind-layout-toggle" onchange="toggleCardLayoutOverride(this.checked)">
+                        </div>
+                        <div id="ind-layout-body" style="display:none; margin-top:6px;"></div>
+                    </div>
                 </div>
 
                 <div id="individual-layout-controls" style="opacity:0.5; pointer-events:none;">
@@ -1923,6 +1933,7 @@
     <script src="js/state.js"></script>
     <script src="js/cropper.js"></script>
     <script src="js/generator.js"></script>
+    <script src="js/card-layout.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,139 @@
+// === ROZVRŽENÍ JEDNÉ KARTY (kvarteta + mytologie) =========================
+// Per-karta přepis velikosti a umístění označení (ID), názvu a popisku.
+// Uloženo v card.quartetData[store] jako { klíč: číslo }; null = karta se řídí
+// globálním nastavením režimu. Klíče jsou stejné jako v globálních settings,
+// takže renderer jen sloučí { ...globál, ...override } (viz getCardLayout).
+
+const CARD_LAYOUT_MODES = {
+    quartet: {
+        store: 'layoutOverride',
+        settings: () => AppState.quartetSettings || {},
+        fields: [
+            { key: 'idBadgeSize',  label: 'Velikost označení (×)',  min: 0.5, max: 2.5, step: 0.05, def: 1.0 },
+            { key: 'idOffsetX',    label: 'Označení X (%)',         min: 0,   max: 100, step: 1,    def: 50 },
+            { key: 'idOffsetY',    label: 'Označení Y (%)',         min: 0,   max: 100, step: 1,    def: 2 },
+            { key: 'nameFontSize', label: 'Velikost názvu (rem)',   min: 0.5, max: 3.0, step: 0.05, def: 1.3 },
+            { key: 'nameOffsetX',  label: 'Název X (%)',            min: 0,   max: 100, step: 1,    def: 50 },
+            { key: 'nameOffsetY',  label: 'Název Y (%)',            min: 0,   max: 100, step: 1,    def: 12 },
+            { key: 'descFontSize', label: 'Velikost popisku (rem)', min: 0.3, max: 2.0, step: 0.05, def: 0.6 },
+            { key: 'descOffsetX',  label: 'Popisek X (%)',          min: 0,   max: 100, step: 1,    def: 50 },
+            { key: 'descOffsetY',  label: 'Popisek Y (%)',          min: 0,   max: 100, step: 1,    def: 5 }
+        ]
+    },
+    quartet_mythology: {
+        store: 'mythLayoutOverride',
+        settings: () => AppState.mythologySettings || {},
+        fields: [
+            { key: 'idBadgeSize',      label: 'Velikost označení (×)',       min: 0.5, max: 2.5, step: 0.05, def: 1.0 },
+            { key: 'idBadgeOffsetX',   label: 'Označení — posun X (%)',      min: -15, max: 15,  step: 0.5,  def: 0 },
+            { key: 'idBadgeOffsetY',   label: 'Označení — posun Y (%)',      min: -15, max: 15,  step: 0.5,  def: 0 },
+            { key: 'nameFontSize',     label: 'Velikost jména (×)',          min: 0.5, max: 2.5, step: 0.05, def: 1.0 },
+            { key: 'subtitleFontSize', label: 'Velikost podtitulu (×)',      min: 0.5, max: 2.5, step: 0.05, def: 1.0 },
+            { key: 'namePatchOffsetX', label: 'Jméno + podtitul — posun X (%)', min: -30, max: 30, step: 0.5, def: 0 },
+            { key: 'namePatchOffsetY', label: 'Jméno + podtitul — posun Y (%)', min: -30, max: 30, step: 0.5, def: 0 }
+        ]
+    }
+};
+
+function getCardLayoutMode() {
+    return CARD_LAYOUT_MODES[AppState.gameMode] || null;
+}
+
+// Globální nastavení sloučené s přepisem karty — čtou ho drawQuartetOverlay / drawMythologyOverlay.
+function getCardLayout(card) {
+    const mode = getCardLayoutMode();
+    if (!mode) return {};
+    const base = mode.settings();
+    const override = card && card.quartetData ? card.quartetData[mode.store] : null;
+    return override ? { ...base, ...override } : base;
+}
+
+// Hodnota, kterou karta právě používá bez přepisu (výchozí hodnoty = renderer)
+function globalLayoutValue(mode, field) {
+    const s = mode.settings();
+    // Mytologie: ID badge bez vlastní velikosti přebírá velikost origin badge
+    const fallback = (field.key === 'idBadgeSize' && AppState.gameMode === 'quartet_mythology')
+        ? (s.cornerBadgeSize ?? field.def)
+        : field.def;
+    const v = parseFloat(s[field.key]);
+    return Number.isFinite(v) ? v : fallback;
+}
+
+function getActiveCard() {
+    if (!AppState.activeCardId) return null;
+    return AppState.cards.find(c => c.id === AppState.activeCardId) || null;
+}
+
+function toggleCardLayoutOverride(enabled) {
+    const card = getActiveCard();
+    const mode = getCardLayoutMode();
+    if (!card || !mode) return;
+    if (!card.quartetData) card.quartetData = { name: "", description: "", stats: ["", "", "", ""], subtitle: "", badgeOverride: null };
+
+    // Zapnutí = snapshot aktuálních globálních hodnot, aby karta neposkočila
+    card.quartetData[mode.store] = enabled
+        ? Object.fromEntries(mode.fields.map(f => [f.key, globalLayoutValue(mode, f)]))
+        : null;
+
+    saveState();
+    syncCardLayoutControls(card);
+    requestCardRender(card.id);
+}
+
+function updateCardLayoutField(key, value) {
+    const card = getActiveCard();
+    const mode = getCardLayoutMode();
+    const v = parseFloat(value);
+    if (!card || !mode || !card.quartetData || !card.quartetData[mode.store] || !Number.isFinite(v)) return;
+    card.quartetData[mode.store] = { ...card.quartetData[mode.store], [key]: v };
+    debouncedSaveState();
+    requestCardRender(card.id);
+}
+
+// Posuvníky se staví z CARD_LAYOUT_MODES — jen při změně režimu
+function buildCardLayoutSliders(body, mode) {
+    body.innerHTML = '';
+    mode.fields.forEach(f => {
+        const group = document.createElement('div');
+        group.className = 'control-group';
+        group.innerHTML = `
+            <div class="control-header">
+                <label>${f.label}</label>
+                <span class="value-badge" id="val-ind-layout-${f.key}"></span>
+            </div>
+            <input type="range" id="ind-layout-${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" style="width:100%;">`;
+        const input = group.querySelector('input');
+        const badge = group.querySelector('.value-badge');
+        input.addEventListener('input', () => {
+            badge.innerText = input.value;
+            updateCardLayoutField(f.key, input.value);
+        });
+        body.appendChild(group);
+    });
+    body.dataset.mode = AppState.gameMode;
+}
+
+function syncCardLayoutControls(card) {
+    const section = document.getElementById('ind-card-layout');
+    const body = document.getElementById('ind-layout-body');
+    const toggle = document.getElementById('ind-layout-toggle');
+    const mode = getCardLayoutMode();
+    if (!section || !body || !toggle) return;
+    if (!mode || !card) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    if (body.dataset.mode !== AppState.gameMode) buildCardLayoutSliders(body, mode);
+
+    const override = card.quartetData ? card.quartetData[mode.store] : null;
+    toggle.checked = !!override;
+    body.style.display = override ? 'block' : 'none';
+    if (!override) return;
+
+    mode.fields.forEach(f => {
+        const value = override[f.key] ?? globalLayoutValue(mode, f);
+        const input = document.getElementById(`ind-layout-${f.key}`);
+        const badge = document.getElementById(`val-ind-layout-${f.key}`);
+        if (input) input.value = value;
+        if (badge) badge.innerText = value;
+    });
+}
