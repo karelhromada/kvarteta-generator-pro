@@ -520,9 +520,18 @@
                            oninput="updateMythologyVar('idBadgeOffsetY', this.value); updateValueBadge(this.id, this.value + '%')" style="width:100%;">
                 </div>
 
-                <div class="control-group" title="Mění velikost textu v ID badge i origin badge. Rámeček (padding) se automaticky upraví podle velikosti písma.">
+                <div class="control-group" title="Mění velikost označení karty (např. 1A) vlevo nahoře. Rámeček se automaticky upraví podle velikosti písma.">
                     <div class="control-header">
-                        <label>Velikost rohových badge (ID + origin)</label>
+                        <label>Velikost označení (ID)</label>
+                        <span class="value-badge" id="val-mythology-id-size">1.0×</span>
+                    </div>
+                    <input type="range" id="mythology-id-size" min="0.5" max="2.5" step="0.05" value="1.0"
+                           oninput="updateMythologyVar('idBadgeSize', this.value); updateValueBadge(this.id, this.value + '×')" style="width:100%;">
+                </div>
+
+                <div class="control-group" title="Mění velikost štítku skupiny (origin badge) vpravo nahoře. Rámeček se automaticky upraví podle velikosti písma.">
+                    <div class="control-header">
+                        <label>Velikost štítku skupiny</label>
                         <span class="value-badge" id="val-mythology-corner-size">1.0×</span>
                     </div>
                     <input type="range" id="mythology-corner-size" min="0.5" max="2.5" step="0.05" value="1.0"
