@@ -34,6 +34,7 @@ const TEXT_ALIGN_DEFAULT = 'center';
 // Projekty bez uloženého zarovnání (starší / vygenerované JSONy) měly text vlevo a pole
 // často posunuté doprava přes okraj karty, aby text vypadal vycentrovaně. Výchozí stav
 // je teď symetrický: střed pole na střed karty + text na střed. Uložené zarovnání se nemění.
+// INVARIANT: kdo zapisuje *OffsetX, musí zapsat i *Align — jinak se X při dalším otevření vrátí na 50.
 function withSymmetricTextFields(settings) {
     if (!settings) return settings;
     return Object.keys(TEXT_FIELDS).reduce((acc, field) => {
@@ -69,7 +70,7 @@ function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, 
     el.style.fontSize = fontSize;
     el.dataset.baseFontSize = fontSize;
     const align = lay[k.align];
-    if (TEXT_ALIGNS.includes(align)) el.style.textAlign = align; // jinak zděděné (vlevo)
+    if (TEXT_ALIGNS.includes(align)) el.style.textAlign = align; // vždy platné po migrateMissingState
 
     const inner = document.createElement('div');
     inner.className = 'kvarteta-text-inner';

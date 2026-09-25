@@ -557,7 +557,9 @@ function migrateMissingState() {
         if (typeof ms.statCount         !== 'number') ms.statCount         = 4;
     }
 
-    // Klasický kvartet — pole názvu / popisku symetricky na kartě (starší projekty bez zarovnání)
+    // Klasický kvartet — pole názvu / popisku symetricky na kartě (starší projekty bez zarovnání).
+    // Pozor: literál AppState výchozí X/zarovnání polí nenese — doplňuje je výhradně tato migrace
+    // (běží při startu i při načtení projektu), takže ji nelze omezit jen na staré projekty.
     AppState.quartetSettings = withSymmetricTextFields(AppState.quartetSettings);
     if (Array.isArray(AppState.cards)) {
         AppState.cards = AppState.cards.map(c => (c && c.quartetData && c.quartetData.layoutOverride)
