@@ -18,8 +18,14 @@ const TEXT_FIELDS = {
             defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 }, fontRange: [0.3, 2.0] }
 };
 
-// Střed pole na středu karty (x = střed pole v % šířky karty)
+// „Na střed karty“: střed pole na střed karty (x v % šířky karty) + text zarovnaný na střed.
+// Samotný posun pole nestačí — text zarovnaný vlevo by uskočil a každý název je jinak dlouhý.
 const TEXT_FIELD_CARD_CENTER = 50;
+
+function cardCenterValues(field) {
+    const k = TEXT_FIELDS[field];
+    return { [k.x]: TEXT_FIELD_CARD_CENTER, [k.align]: 'center' };
+}
 
 // Zarovnání textu jako ve Wordu; bez nastavení = vlevo (původní vzhled)
 const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'];

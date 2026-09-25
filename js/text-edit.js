@@ -138,7 +138,7 @@ function centerTextFieldOnCard() {
     if (!textSelection) return;
     const card = AppState.cards.find(c => c.id === textSelection.cardId);
     if (!card) return;
-    writeTextFieldValues(card.id, { [TEXT_FIELDS[textSelection.field].x]: TEXT_FIELD_CARD_CENTER });
+    writeTextFieldValues(card.id, cardCenterValues(textSelection.field));
     saveState();
     renderUIFromState();
 }
@@ -146,7 +146,7 @@ function centerTextFieldOnCard() {
 // Tlačítko v globálním panelu: pole na střed karty pro celou sadu
 function centerQuartetFieldOnCard(field) {
     if (!TEXT_FIELDS[field]) return;
-    AppState.quartetSettings = { ...AppState.quartetSettings, [TEXT_FIELDS[field].x]: TEXT_FIELD_CARD_CENTER };
+    AppState.quartetSettings = { ...AppState.quartetSettings, ...cardCenterValues(field) };
     saveState();
     renderUIFromState();
 }
