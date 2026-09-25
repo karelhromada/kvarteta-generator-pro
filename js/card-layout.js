@@ -125,8 +125,10 @@ function syncCardLayoutControls(card) {
     if (body.dataset.mode !== AppState.gameMode) buildCardLayoutSliders(body, mode);
 
     const override = card.quartetData ? card.quartetData[mode.store] : null;
+    const actions = document.getElementById('ind-layout-actions');
     toggle.checked = !!override;
     body.style.display = override ? 'block' : 'none';
+    if (actions) actions.style.display = override ? 'block' : 'none';
     if (!override) return;
 
     mode.fields.forEach(f => {
@@ -136,4 +138,30 @@ function syncCardLayoutControls(card) {
         if (input) input.value = value;
         if (badge) badge.innerText = value;
     });
+}
+
+// Rozvržení aktivní karty se stane globálním nastavením celé sady;
+// vlastní rozvržení všech karet se zruší (dál se ladí globálními posuvníky).
+function applyCardLayoutToAll() {
+    const card = getActiveCard();
+    const mode = getCardLayoutMode();
+    const override = card && mode && card.quartetData ? card.quartetData[mode.store] : null;
+    if (!override) {
+        alert('Tato karta nemá vlastní rozvržení. Zapni „Vlastní velikost a umístění“ a nastav ho.');
+        return;
+    }
+    const others = AppState.cards.filter(c => c.id !== card.id && c.quartetData && c.quartetData[mode.store]).length;
+    const warning = others ? ` Vlastní rozvržení na ${others} dalších kartách se zruší.` : '';
+    if (!confirm(`Použít rozvržení karty „${card.label}" na všechny karty sady?${warning} (Lze vrátit tlačítkem Zpět.)`)) {
+        return;
+    }
+
+    const settingsKey = AppState.gameMode === 'quartet' ? 'quartetSettings' : 'mythologySettings';
+    AppState[settingsKey] = { ...AppState[settingsKey], ...override };
+    AppState.cards = AppState.cards.map(c => (c.quartetData && c.quartetData[mode.store])
+        ? { ...c, quartetData: { ...c.quartetData, [mode.store]: null } }
+        : c);
+
+    saveState();
+    renderUIFromState();
 }
