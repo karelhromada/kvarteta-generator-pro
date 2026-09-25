@@ -176,6 +176,7 @@ function createCardElement(card) {
     cardEl.className = 'preview-card';
     if (AppState.activeCardId === card.id) cardEl.classList.add('active');
     if (card.isLocked) cardEl.classList.add('is-locked');
+    if (hasTextSelection(card.id)) cardEl.classList.add('tf-editing'); // úchyty i mimo kartu
     cardEl.id = 'card-el-' + card.id;
     cardEl.style.width = Math.round(AppState.cardWidth * scaleUi) + 'px';
     cardEl.style.height = Math.round(AppState.cardHeight * scaleUi) + 'px';
@@ -491,14 +492,8 @@ function drawQuartetOverlay(cardEl, card) {
     const lay = getCardLayout(card);
     const idOffsetX = lay.idOffsetX ?? 50;
     const idOffsetY = lay.idOffsetY ?? 2;
-    const nameOffsetX = lay.nameOffsetX ?? 50;
-    const nameOffsetY = lay.nameOffsetY ?? 12;
-    const descOffsetX = lay.descOffsetX ?? 50;
-    const descOffsetY = lay.descOffsetY ?? 5;
-    // Velikosti — výchozí hodnoty odpovídají CSS (.kvarteta-id-badge / -card-name / -card-desc)
+    // Velikost — výchozí hodnota odpovídá CSS .kvarteta-id-badge (název a popisek: js/text-box.js)
     const idBadgeSize  = parseFloat(lay.idBadgeSize)  || 1.0;
-    const nameFontSize = parseFloat(lay.nameFontSize) || 1.3;
-    const descFontSize = parseFloat(lay.descFontSize) || 0.6;
 
     idBadge.style.borderColor = cssColor;
     idBadge.style.color = useSetColorId ? cssColor : '#fff';
@@ -623,33 +618,17 @@ function drawQuartetOverlay(cardEl, card) {
         cardEl.appendChild(statsWrapper);
     }
 
-    // Name and Description
-    const cardName = document.createElement('h1');
-    cardName.className = 'kvarteta-card-name';
-    cardName.style.position = 'absolute';
-    cardName.style.left = `${nameOffsetX}%`;
-    cardName.style.bottom = `${nameOffsetY}%`;
-    cardName.style.transform = 'translateX(-50%)';
-    cardName.style.width = '90%';
-    cardName.style.color = useSetColorName ? cssColor : '#fff';
-    setTextWithBox(cardName, data.name || `Karta ${subStr}`, lay, 'name');
-    cardName.style.fontFamily = fontFamily;
-    cardName.style.fontSize = `${nameFontSize}rem`;
-    cardEl.appendChild(cardName);
-    
-    const cardDesc = document.createElement('p');
-    cardDesc.className = 'kvarteta-card-desc';
-    cardDesc.style.position = 'absolute';
-    cardDesc.style.left = `${descOffsetX}%`;
-    cardDesc.style.bottom = `${descOffsetY}%`;
-    cardDesc.style.transform = 'translateX(-50%)';
-    cardDesc.style.width = '80%';
-    cardDesc.style.margin = '0';
-    setTextWithBox(cardDesc, data.description || '', lay, 'desc');
-    cardDesc.style.fontFamily = fontFamily;
-    cardDesc.style.fontSize = `${descFontSize}rem`;
-    cardDesc.style.color = useSetColorDesc ? cssColor : '#ddd';
-    cardEl.appendChild(cardDesc);
+    // Název a popisek — textová pole upravitelná i přímo na kartě (js/text-box.js, js/text-edit.js)
+    cardEl.appendChild(buildTextField({
+        tag: 'h1', className: 'kvarteta-card-name', field: 'name', cardId: card.id,
+        text: data.name || `Karta ${subStr}`, lay, fontFamily,
+        color: useSetColorName ? cssColor : '#fff'
+    }));
+    cardEl.appendChild(buildTextField({
+        tag: 'p', className: 'kvarteta-card-desc', field: 'desc', cardId: card.id,
+        text: data.description || '', lay, fontFamily,
+        color: useSetColorDesc ? cssColor : '#ddd'
+    }));
 }
 
 // === MYTOLOGIE OVERLAY =====================================================
@@ -1018,6 +997,8 @@ function toggleCardLock(locked) {
 }
 
 async function downloadAllAsZip() {
+    clearTextSelection(); // bez úchytů a s normálním ořezem karty
+    flushTextFieldFits();
     const cards = AppState.cards;
     const zip = new JSZip();
     const overlay = document.getElementById('progress-overlay');
@@ -1115,6 +1096,8 @@ async function downloadAllAsZip() {
 
 async function exportSingleCard() {
     if (!AppState.activeCardId) return;
+    clearTextSelection(); // bez úchytů a s normálním ořezem karty
+    flushTextFieldFits();
     const cardEl = document.getElementById('card-el-' + AppState.activeCardId);
     if (!cardEl) return;
 
@@ -1640,6 +1623,8 @@ function renderUIFromState() {
             ['quartet-id-offset-x', qs.idOffsetX ?? 50],   ['quartet-id-offset-y', qs.idOffsetY ?? 2],
             ['quartet-name-offset-x', qs.nameOffsetX ?? 50], ['quartet-name-offset-y', qs.nameOffsetY ?? 12],
             ['quartet-desc-offset-x', qs.descOffsetX ?? 50], ['quartet-desc-offset-y', qs.descOffsetY ?? 5],
+            ['quartet-name-width', qs.nameWidth ?? 90],  ['quartet-name-height', qs.nameHeight ?? 0],
+            ['quartet-desc-width', qs.descWidth ?? 80],  ['quartet-desc-height', qs.descHeight ?? 0],
             ['quartet-id-size', qs.idBadgeSize || 1.0],
             ['quartet-name-font-size', qs.nameFontSize || 1.3],
             ['quartet-desc-font-size', qs.descFontSize || 0.6]
