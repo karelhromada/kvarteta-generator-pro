@@ -621,7 +621,7 @@ function drawQuartetOverlay(cardEl, card) {
     // Název a popisek — textová pole upravitelná i přímo na kartě (js/text-box.js, js/text-edit.js)
     cardEl.appendChild(buildTextField({
         tag: 'h1', className: 'kvarteta-card-name', field: 'name', cardId: card.id,
-        text: data.name || `Karta ${subStr}`, lay, fontFamily,
+        text: data.name || `Karta ${subStr}`, lay, fontFamily, boxed: !!data.name,
         color: useSetColorName ? cssColor : '#fff'
     }));
     cardEl.appendChild(buildTextField({

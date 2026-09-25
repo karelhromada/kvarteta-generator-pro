@@ -218,6 +218,7 @@ function isQuartetFamily(mode) {
 }
 
 function initCardsByMode(mode) {
+    resetTextSelection();
     // Pokud uživatel mění režim (ne pouhý reload), přepneme i rozměry karet
     const prevMode = AppState.gameMode;
     AppState.gameMode = mode;
@@ -365,6 +366,7 @@ function restoreFromHistory() {
     const currentHistoryIndex = AppState.historyIndex;
     
     AppState = historicalState;
+    resetTextSelection();
     AppState.history = currentHistory;
     AppState.historyIndex = currentHistoryIndex;
 
@@ -399,6 +401,8 @@ async function exportProject() {
 
 function loadProject(event) {
     const file = event.target.files[0];
+    // Vynulovat výběr → stejný soubor půjde otevřít znovu (jinak prohlížeč nepošle change)
+    event.target.value = '';
     if (!file) return;
 
     const reader = new FileReader();
@@ -415,6 +419,7 @@ function loadProject(event) {
 
             // Vyčistíme historii při načtení nového projektu
             AppState = newState;
+            resetTextSelection();
             AppState.history = [];
             AppState.historyIndex = -1;
 

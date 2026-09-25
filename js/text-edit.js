@@ -6,7 +6,7 @@
 // Ovládací prvky nesou data-html2canvas-ignore → nejsou v Export ZIP.
 
 const TEXT_FIELD_MIN = { w: 10, h: 3 };      // % karty
-const TEXT_FIELD_FONT = { min: 0.3, max: 4, step: 0.1 }; // rem
+const TEXT_FIELD_FONT_STEP = 0.1; // rem; meze písma = TEXT_FIELDS[field].fontRange (jako posuvníky)
 const TEXT_FIELD_HANDLES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
 let textSelection = null; // { cardId, field }
@@ -34,6 +34,13 @@ function writeTextFieldValues(cardId, values) {
     } else {
         AppState.quartetSettings = { ...AppState.quartetSettings, ...values };
     }
+}
+
+// Nový projekt / změna režimu / Zpět: starý výběr by se jinak přichytil ke kartě se stejným id
+function resetTextSelection() {
+    textSelection = null;
+    if (textDrag && textDrag.frame) cancelAnimationFrame(textDrag.frame);
+    textDrag = null;
 }
 
 function hasTextSelection(cardId) {
@@ -67,6 +74,12 @@ function decorateTextField(el, cardId, field) {
     const toolbar = document.createElement('div');
     toolbar.className = 'tf-toolbar';
     toolbar.setAttribute('data-html2canvas-ignore', '');
+    // Kam změna půjde: vlastní rozvržení karty, nebo celá sada
+    const card = AppState.cards.find(c => c.id === cardId);
+    const scope = document.createElement('span');
+    scope.className = 'tf-scope';
+    scope.innerText = card && card.quartetData && card.quartetData.layoutOverride ? 'Jen tato karta' : 'Celá sada';
+    toolbar.appendChild(scope);
     [['A−', -1, 'Menší písmo'], ['A+', 1, 'Větší písmo']].forEach(([label, dir, title]) => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -98,7 +111,8 @@ function changeTextFieldFont(step) {
     if (!card) return;
     const k = TEXT_FIELDS[textSelection.field];
     const current = textFieldValues(card, textSelection.field).font;
-    const next = Math.min(TEXT_FIELD_FONT.max, Math.max(TEXT_FIELD_FONT.min, round1(current + step * TEXT_FIELD_FONT.step)));
+    const [min, max] = k.fontRange;
+    const next = Math.min(max, Math.max(min, round1(current + step * TEXT_FIELD_FONT_STEP)));
     writeTextFieldValues(card.id, { [k.font]: next });
     saveState();
     renderUIFromState();
@@ -119,12 +133,24 @@ function startTextFieldDrag(e, fieldEl, dir) {
     const cardId = fieldEl.dataset.cardId;
     const field = fieldEl.dataset.textField;
     const card = AppState.cards.find(c => c.id === cardId);
-    const cardRect = document.getElementById('card-el-' + cardId).getBoundingClientRect();
+    const cardEl = document.getElementById('card-el-' + cardId);
+    if (!card || !cardEl) return;
+    const cardRect = cardEl.getBoundingClientRect();
     const start = textFieldValues(card, field);
     // Výška „auto“ + tažení svisle → začni od skutečné výšky pole
     if (!start.h && /[ns]/.test(dir)) start.h = round1(fieldEl.getBoundingClientRect().height / cardRect.height * 100);
     textDrag = { cardId, field, dir, start, startX: e.clientX, startY: e.clientY,
-                 cardW: cardRect.width, cardH: cardRect.height, moved: false };
+                 cardW: cardRect.width, cardH: cardRect.height, moved: false, pending: null, frame: null };
+}
+
+// Zápis + překreslení karty nejvýš jednou za snímek
+function applyTextDragFrame() {
+    if (!textDrag) return;
+    textDrag.frame = null;
+    if (!textDrag.pending) return;
+    writeTextFieldValues(textDrag.cardId, textDrag.pending);
+    textDrag.pending = null;
+    renderCard(textDrag.cardId); // ostatní karty se překreslí po puštění
 }
 
 document.addEventListener('mousedown', (e) => {
@@ -164,12 +190,14 @@ document.addEventListener('mousemove', (e) => {
     const k = TEXT_FIELDS[textDrag.field];
     const values = { [k.x]: round1(v.x), [k.y]: round1(v.y), [k.w]: round1(v.w) };
     if (v.h) values[k.h] = round1(v.h);
-    writeTextFieldValues(textDrag.cardId, values);
-    renderCard(textDrag.cardId); // ostatní karty se překreslí po puštění
+    textDrag.pending = values;
+    if (!textDrag.frame) textDrag.frame = requestAnimationFrame(applyTextDragFrame);
 });
 
 document.addEventListener('mouseup', () => {
     if (!textDrag) return;
+    if (textDrag.frame) cancelAnimationFrame(textDrag.frame);
+    if (textDrag.pending) writeTextFieldValues(textDrag.cardId, textDrag.pending); // poslední pohyb
     const moved = textDrag.moved;
     textDrag = null;
     if (!moved) return;

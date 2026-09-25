@@ -13,13 +13,13 @@ const TEXT_FIELD_MIN_FONT_PX = 4;
 // x = střed pole, y = spodní hrana od spodku karty, w/h = rozměr; vše v % karty; h 0 = auto.
 const TEXT_FIELDS = {
     name: { x: 'nameOffsetX', y: 'nameOffsetY', w: 'nameWidth', h: 'nameHeight', font: 'nameFontSize',
-            defaults: { x: 50, y: 12, w: 90, h: 0, font: 1.3 } },
+            defaults: { x: 50, y: 12, w: 90, h: 0, font: 1.3 }, fontRange: [0.5, 3.0] },
     desc: { x: 'descOffsetX', y: 'descOffsetY', w: 'descWidth', h: 'descHeight', font: 'descFontSize',
-            defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 } }
+            defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 }, fontRange: [0.3, 2.0] }
 };
 
 // Vytvoří pole názvu / popisku (element + vnitřek s textem, případně rámečkem)
-function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, color }) {
+function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, color, boxed = true }) {
     const k = TEXT_FIELDS[field];
     const num = (key, def) => { const v = parseFloat(lay[key]); return Number.isFinite(v) ? v : def; };
     const d = k.defaults;
@@ -42,7 +42,7 @@ function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, 
 
     const inner = document.createElement('div');
     inner.className = 'kvarteta-text-inner';
-    setTextWithBox(inner, text, lay, field);
+    setTextWithBox(inner, text, lay, field, boxed);
     el.appendChild(inner);
 
     decorateTextField(el, cardId, field);
@@ -51,7 +51,8 @@ function buildTextField({ tag, className, field, cardId, text, lay, fontFamily, 
 }
 
 function hexToRgba(hex, alpha) {
-    const h = String(hex || '#000000').replace('#', '');
+    let h = String(hex || '#000000').replace('#', '');
+    if (h.length === 3) h = h.split('').map(ch => ch + ch).join(''); // #fff → #ffffff
     const r = parseInt(h.substring(0, 2), 16) || 0;
     const g = parseInt(h.substring(2, 4), 16) || 0;
     const b = parseInt(h.substring(4, 6), 16) || 0;
@@ -59,8 +60,9 @@ function hexToRgba(hex, alpha) {
 }
 
 // Vloží text do elementu; při enabled ho obalí rámečkem. prefix = 'name' | 'desc'.
-function setTextWithBox(el, text, settings, prefix) {
-    const enabled = !!settings[`${prefix}BoxEnabled`];
+// allowBox = false → bez rámečku (zástupný text nevyplněného názvu)
+function setTextWithBox(el, text, settings, prefix, allowBox = true) {
+    const enabled = allowBox && !!settings[`${prefix}BoxEnabled`];
     if (!enabled || !text) {
         el.innerText = text;
         return;
