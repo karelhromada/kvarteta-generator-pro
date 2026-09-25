@@ -4,6 +4,9 @@
 // globálním nastavením režimu. Klíče jsou stejné jako v globálních settings,
 // takže renderer jen sloučí { ...globál, ...override } (viz getCardLayout).
 
+// Výběrová pole (místo posuvníku) — hodnota je text
+const ALIGN_OPTIONS = [['left', 'Vlevo'], ['center', 'Na střed'], ['right', 'Vpravo'], ['justify', 'Do bloku']];
+
 const CARD_LAYOUT_MODES = {
     quartet: {
         store: 'layoutOverride',
@@ -17,11 +20,13 @@ const CARD_LAYOUT_MODES = {
             { key: 'nameOffsetY',  label: 'Název Y (%)',            min: 0,   max: 100, step: 1,    def: 12 },
             { key: 'nameWidth',    label: 'Název šířka (%)',        min: 10,  max: 100, step: 0.5,  def: 90 },
             { key: 'nameHeight',   label: 'Název výška (%, 0 = auto)', min: 0, max: 60, step: 0.5,  def: 0 },
+            { key: 'nameAlign',    label: 'Zarovnání názvu',        options: ALIGN_OPTIONS,       def: 'left' },
             { key: 'descFontSize', label: 'Velikost popisku (rem)', min: 0.3, max: 2.0, step: 0.05, def: 0.6 },
             { key: 'descOffsetX',  label: 'Popisek X (%)',          min: 0,   max: 100, step: 1,    def: 50 },
             { key: 'descOffsetY',  label: 'Popisek Y (%)',          min: 0,   max: 100, step: 1,    def: 5 },
             { key: 'descWidth',    label: 'Popisek šířka (%)',      min: 10,  max: 100, step: 0.5,  def: 80 },
-            { key: 'descHeight',   label: 'Popisek výška (%, 0 = auto)', min: 0, max: 60, step: 0.5, def: 0 }
+            { key: 'descHeight',   label: 'Popisek výška (%, 0 = auto)', min: 0, max: 60, step: 0.5, def: 0 },
+            { key: 'descAlign',    label: 'Zarovnání popisku',      options: ALIGN_OPTIONS,       def: 'left' }
         ]
     },
     quartet_mythology: {
@@ -55,6 +60,7 @@ function getCardLayout(card) {
 // Hodnota, kterou karta právě používá bez přepisu (výchozí hodnoty = renderer)
 function globalLayoutValue(mode, field) {
     const s = mode.settings();
+    if (field.options) return field.options.some(([v]) => v === s[field.key]) ? s[field.key] : field.def;
     // Mytologie: ID badge bez vlastní velikosti přebírá velikost origin badge
     const fallback = (field.key === 'idBadgeSize' && AppState.gameMode === 'quartet_mythology')
         ? (s.cornerBadgeSize ?? field.def)
@@ -87,8 +93,11 @@ function toggleCardLayoutOverride(enabled) {
 function updateCardLayoutField(key, value) {
     const card = getActiveCard();
     const mode = getCardLayoutMode();
-    const v = parseFloat(value);
-    if (!card || !mode || !card.quartetData || !card.quartetData[mode.store] || !Number.isFinite(v)) return;
+    const field = mode && mode.fields.find(f => f.key === key);
+    if (!card || !field || !card.quartetData || !card.quartetData[mode.store]) return;
+    const v = field.options ? value : parseFloat(value);
+    const valid = field.options ? field.options.some(([o]) => o === v) : Number.isFinite(v);
+    if (!valid) return;
     card.quartetData[mode.store] = { ...card.quartetData[mode.store], [key]: v };
     debouncedSaveState();
     requestCardRender(card.id);
@@ -98,6 +107,7 @@ function updateCardLayoutField(key, value) {
 function buildCardLayoutSliders(body, mode) {
     body.innerHTML = '';
     mode.fields.forEach(f => {
+        if (f.options) { body.appendChild(buildCardLayoutSelect(f)); return; }
         const group = document.createElement('div');
         group.className = 'control-group';
         group.innerHTML = `
@@ -115,6 +125,20 @@ function buildCardLayoutSliders(body, mode) {
         body.appendChild(group);
     });
     body.dataset.mode = AppState.gameMode;
+}
+
+function buildCardLayoutSelect(f) {
+    const row = document.createElement('div');
+    row.className = 'control-row';
+    const label = document.createElement('label');
+    label.innerText = f.label;
+    const select = document.createElement('select');
+    select.id = `ind-layout-${f.key}`;
+    select.className = 'dropdown';
+    f.options.forEach(([value, text]) => select.appendChild(new Option(text, value)));
+    select.addEventListener('change', () => updateCardLayoutField(f.key, select.value));
+    row.append(label, select);
+    return row;
 }
 
 function syncCardLayoutControls(card) {
