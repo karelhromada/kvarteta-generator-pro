@@ -679,6 +679,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: 0; white-space: nowrap;
 }
 .tf-scope { color: #7dd3fc; padding: 1px 5px 1px 3px; font-weight: 500; }
+.tf-toolbar-below { bottom: auto; top: 100%; transform: translate(-50%, 8px); }
+.tf-sep { width: 1px; margin: 2px 3px; background: rgba(255,255,255,0.25); }
+.tf-toolbar button[data-align] { display: flex; align-items: center; padding: 1px 4px; }
+.tf-toolbar button.active { background: rgba(14,165,233,0.45); }
 .tf-toolbar button { background: none; border: none; color: #fff; cursor: pointer; padding: 1px 6px; font: inherit; border-radius: 3px; }
 .tf-toolbar button:hover { background: #0ea5e9; }
 @media print { .tf-outline, .tf-handle, .tf-toolbar { display: none !important; } }

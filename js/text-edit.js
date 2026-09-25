@@ -8,6 +8,13 @@
 const TEXT_FIELD_MIN = { w: 10, h: 3 };      // % karty
 const TEXT_FIELD_FONT_STEP = 0.1; // rem; meze písma = TEXT_FIELDS[field].fontRange (jako posuvníky)
 const TEXT_FIELD_HANDLES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+// Ikony zarovnání (4 čáry jako ve Wordu): [x1, x2] každé čáry v 16px mřížce
+const TEXT_ALIGN_ICONS = {
+    left:    { title: 'Zarovnat vlevo',   lines: [[2, 14], [2, 10], [2, 14], [2, 9]] },
+    center:  { title: 'Zarovnat na střed', lines: [[2, 14], [4, 12], [2, 14], [5, 11]] },
+    right:   { title: 'Zarovnat vpravo',  lines: [[2, 14], [6, 14], [2, 14], [7, 14]] },
+    justify: { title: 'Do bloku',          lines: [[2, 14], [2, 14], [2, 14], [2, 9]] }
+};
 
 let textSelection = null; // { cardId, field }
 let textDrag = null;
@@ -72,7 +79,8 @@ function decorateTextField(el, cardId, field) {
     });
 
     const toolbar = document.createElement('div');
-    toolbar.className = 'tf-toolbar';
+    // Popisek bývá pod názvem → jeho lišta jde dolů, aby nezakryla název (a naopak)
+    toolbar.className = field === 'desc' ? 'tf-toolbar tf-toolbar-below' : 'tf-toolbar';
     toolbar.setAttribute('data-html2canvas-ignore', '');
     // Kam změna půjde: vlastní rozvržení karty, nebo celá sada
     const card = AppState.cards.find(c => c.id === cardId);
@@ -88,7 +96,44 @@ function decorateTextField(el, cardId, field) {
         btn.dataset.fontStep = String(dir);
         toolbar.appendChild(btn);
     });
+    const current = card ? textFieldAlign(getCardLayout(card), field) : TEXT_ALIGN_DEFAULT;
+    const sep = document.createElement('span');
+    sep.className = 'tf-sep';
+    toolbar.appendChild(sep);
+    TEXT_ALIGNS.forEach(align => toolbar.appendChild(buildAlignButton(align, align === current)));
     el.appendChild(toolbar);
+}
+
+function buildAlignButton(align, active) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = TEXT_ALIGN_ICONS[align].title;
+    btn.dataset.align = align;
+    if (active) btn.classList.add('active');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('width', '13');
+    svg.setAttribute('height', '13');
+    TEXT_ALIGN_ICONS[align].lines.forEach(([x1, x2], i) => {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1); line.setAttribute('x2', x2);
+        line.setAttribute('y1', 3 + i * 3.4); line.setAttribute('y2', 3 + i * 3.4);
+        line.setAttribute('stroke', 'currentColor');
+        line.setAttribute('stroke-width', '1.6');
+        line.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(line);
+    });
+    btn.appendChild(svg);
+    return btn;
+}
+
+function changeTextFieldAlign(align) {
+    if (!textSelection || !TEXT_ALIGNS.includes(align)) return;
+    const card = AppState.cards.find(c => c.id === textSelection.cardId);
+    if (!card) return;
+    writeTextFieldValues(card.id, { [TEXT_FIELDS[textSelection.field].align]: align });
+    saveState();
+    renderUIFromState();
 }
 
 function selectTextField(cardId, field) {
@@ -168,6 +213,8 @@ document.addEventListener('mousedown', (e) => {
 
     const fontBtn = e.target.closest('[data-font-step]');
     if (fontBtn) { changeTextFieldFont(parseInt(fontBtn.dataset.fontStep, 10)); return; }
+    const alignBtn = e.target.closest('[data-align]');
+    if (alignBtn) { changeTextFieldAlign(alignBtn.dataset.align); return; }
 
     const cardId = fieldEl.dataset.cardId;
     const field = fieldEl.dataset.textField;
