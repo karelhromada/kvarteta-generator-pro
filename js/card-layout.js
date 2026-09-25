@@ -16,13 +16,13 @@ const CARD_LAYOUT_MODES = {
             { key: 'idOffsetX',    label: 'Označení X (%)',         min: 0,   max: 100, step: 1,    def: 50 },
             { key: 'idOffsetY',    label: 'Označení Y (%)',         min: 0,   max: 100, step: 1,    def: 2 },
             { key: 'nameFontSize', label: 'Velikost názvu (rem)',   min: 0.5, max: 3.0, step: 0.05, def: 1.3 },
-            { key: 'nameOffsetX',  label: 'Název X (%)',            min: 0,   max: 100, step: 1,    def: 50 },
+            { key: 'nameOffsetX',  label: 'Název X (%)',            min: 0,   max: 100, step: 1,    def: 50, centerButton: true },
             { key: 'nameOffsetY',  label: 'Název Y (%)',            min: 0,   max: 100, step: 1,    def: 12 },
             { key: 'nameWidth',    label: 'Název šířka (%)',        min: 10,  max: 100, step: 0.5,  def: 90 },
             { key: 'nameHeight',   label: 'Název výška (%, 0 = auto)', min: 0, max: 60, step: 0.5,  def: 0 },
             { key: 'nameAlign',    label: 'Zarovnání názvu',        options: ALIGN_OPTIONS,       def: 'left' },
             { key: 'descFontSize', label: 'Velikost popisku (rem)', min: 0.3, max: 2.0, step: 0.05, def: 0.6 },
-            { key: 'descOffsetX',  label: 'Popisek X (%)',          min: 0,   max: 100, step: 1,    def: 50 },
+            { key: 'descOffsetX',  label: 'Popisek X (%)',          min: 0,   max: 100, step: 1,    def: 50, centerButton: true },
             { key: 'descOffsetY',  label: 'Popisek Y (%)',          min: 0,   max: 100, step: 1,    def: 5 },
             { key: 'descWidth',    label: 'Popisek šířka (%)',      min: 10,  max: 100, step: 0.5,  def: 80 },
             { key: 'descHeight',   label: 'Popisek výška (%, 0 = auto)', min: 0, max: 60, step: 0.5, def: 0 },
@@ -122,9 +122,31 @@ function buildCardLayoutSliders(body, mode) {
             badge.innerText = input.value;
             updateCardLayoutField(f.key, input.value);
         });
+        if (f.centerButton) group.appendChild(buildCardCenterButton(f, input, badge));
         body.appendChild(group);
     });
     body.dataset.mode = AppState.gameMode;
+}
+
+// „Na střed karty“ pod posuvníkem X (střed pole = 50 % šířky karty)
+function buildCardCenterButton(f, input, badge) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'action-btn center-card-btn';
+    btn.style.marginTop = '4px';
+    btn.innerText = '⇔ Na střed karty';
+    btn.addEventListener('click', () => {
+        const card = getActiveCard();
+        const mode = getCardLayoutMode();
+        if (!card || !mode || !card.quartetData || !card.quartetData[mode.store]) return;
+        input.value = TEXT_FIELD_CARD_CENTER;
+        badge.innerText = String(TEXT_FIELD_CARD_CENTER);
+        // Jednorázové kliknutí = jeden krok historie hned (ne debounce jako u posuvníku)
+        card.quartetData[mode.store] = { ...card.quartetData[mode.store], [f.key]: TEXT_FIELD_CARD_CENTER };
+        saveState();
+        requestCardRender(card.id);
+    });
+    return btn;
 }
 
 function buildCardLayoutSelect(f) {

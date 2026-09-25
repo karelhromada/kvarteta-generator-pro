@@ -18,6 +18,9 @@ const TEXT_FIELDS = {
             defaults: { x: 50, y: 5, w: 80, h: 0, font: 0.6 }, fontRange: [0.3, 2.0] }
 };
 
+// Střed pole na středu karty (x = střed pole v % šířky karty)
+const TEXT_FIELD_CARD_CENTER = 50;
+
 // Zarovnání textu jako ve Wordu; bez nastavení = vlevo (původní vzhled)
 const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'];
 const TEXT_ALIGN_DEFAULT = 'left';
