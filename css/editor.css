@@ -639,6 +639,60 @@ input[type="range"]::-webkit-slider-thumb:hover {
     text-shadow: none; line-height: 1.1;
 }
 
+/* Textová pole názvu / popisku (js/text-box.js): pevná výška → text svisle na středu */
+.kvarteta-card-name,
+.kvarteta-card-desc {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.kvarteta-text-inner { width: 100%; }
+
+/* Úprava přímo na kartě (js/text-edit.js) — nic z toho nejde do exportu ani tisku */
+.preview-card [data-text-field] { cursor: move; }
+.preview-card [data-text-field]:hover:not(.tf-selected) { outline: 1px dashed rgba(255,255,255,0.45); outline-offset: 1px; }
+.preview-card .tf-selected { z-index: 40; }
+/* Karta s vybraným polem neořezává → úchyty jdou chytit i u pole přesahujícího kartu.
+   Zaoblení ilustrace drží .card-bg (border-radius: inherit). */
+.preview-card.tf-editing { overflow: visible; z-index: 20; }
+.preview-card.tf-editing .card-bg { border-radius: inherit; }
+.tf-outline { position: absolute; inset: 0; border: 1px dashed #38bdf8; pointer-events: none; }
+.tf-handle {
+    position: absolute; width: 8px; height: 8px; z-index: 2;
+    background: #fff; border: 1px solid #0ea5e9; border-radius: 2px;
+    transform: translate(-50%, -50%);
+}
+.tf-n  { left: 50%;  top: 0;    cursor: ns-resize; }
+.tf-s  { left: 50%;  top: 100%; cursor: ns-resize; }
+.tf-e  { left: 100%; top: 50%;  cursor: ew-resize; }
+.tf-w  { left: 0;    top: 50%;  cursor: ew-resize; }
+.tf-ne { left: 100%; top: 0;    cursor: nesw-resize; }
+.tf-sw { left: 0;    top: 100%; cursor: nesw-resize; }
+.tf-nw { left: 0;    top: 0;    cursor: nwse-resize; }
+.tf-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.tf-toolbar {
+    position: absolute; bottom: 100%; left: 50%; z-index: 3;
+    transform: translate(-50%, -8px);
+    display: flex; gap: 2px; padding: 2px;
+    background: #0f172a; border: 1px solid #0ea5e9; border-radius: 4px;
+    font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: 0; white-space: nowrap;
+}
+.tf-scope { color: #7dd3fc; padding: 1px 5px 1px 3px; font-weight: 500; }
+.tf-toolbar button { background: none; border: none; color: #fff; cursor: pointer; padding: 1px 6px; font: inherit; border-radius: 3px; }
+.tf-toolbar button:hover { background: #0ea5e9; }
+@media print { .tf-outline, .tf-handle, .tf-toolbar { display: none !important; } }
+
+/* Rámeček za názvem / popiskem (js/text-box.js) — obtéká text, rezerva v em */
+.kvarteta-text-box {
+    display: inline-block;
+    max-width: calc(100% + 0.9em); /* + odsazení vlevo i vpravo → text se zalomí stejně jako bez rámečku */
+    box-sizing: border-box;
+    padding: 0.12em 0.45em;
+    margin: -0.12em -0.45em;   /* = padding → text zůstane přesně tam, kde byl bez rámečku */
+    border-radius: 0.35em;
+}
+
 .kvarteta-id-badge {
     position: absolute; top: 2%; left: 50%; transform: translateX(-50%);
     width: 15%; aspect-ratio: 1; background: #000; border: 2px solid;

@@ -15,9 +15,13 @@ const CARD_LAYOUT_MODES = {
             { key: 'nameFontSize', label: 'Velikost názvu (rem)',   min: 0.5, max: 3.0, step: 0.05, def: 1.3 },
             { key: 'nameOffsetX',  label: 'Název X (%)',            min: 0,   max: 100, step: 1,    def: 50 },
             { key: 'nameOffsetY',  label: 'Název Y (%)',            min: 0,   max: 100, step: 1,    def: 12 },
+            { key: 'nameWidth',    label: 'Název šířka (%)',        min: 10,  max: 100, step: 0.5,  def: 90 },
+            { key: 'nameHeight',   label: 'Název výška (%, 0 = auto)', min: 0, max: 60, step: 0.5,  def: 0 },
             { key: 'descFontSize', label: 'Velikost popisku (rem)', min: 0.3, max: 2.0, step: 0.05, def: 0.6 },
             { key: 'descOffsetX',  label: 'Popisek X (%)',          min: 0,   max: 100, step: 1,    def: 50 },
-            { key: 'descOffsetY',  label: 'Popisek Y (%)',          min: 0,   max: 100, step: 1,    def: 5 }
+            { key: 'descOffsetY',  label: 'Popisek Y (%)',          min: 0,   max: 100, step: 1,    def: 5 },
+            { key: 'descWidth',    label: 'Popisek šířka (%)',      min: 10,  max: 100, step: 0.5,  def: 80 },
+            { key: 'descHeight',   label: 'Popisek výška (%, 0 = auto)', min: 0, max: 60, step: 0.5, def: 0 }
         ]
     },
     quartet_mythology: {
