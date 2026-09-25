@@ -493,11 +493,17 @@ function drawQuartetOverlay(cardEl, card) {
     const nameOffsetY = AppState.quartetSettings.nameOffsetY ?? 12;
     const descOffsetX = AppState.quartetSettings.descOffsetX ?? 50;
     const descOffsetY = AppState.quartetSettings.descOffsetY ?? 5;
+    // Velikosti — výchozí hodnoty odpovídají CSS (.kvarteta-id-badge / -card-name / -card-desc)
+    const idBadgeSize  = parseFloat(AppState.quartetSettings.idBadgeSize)  || 1.0;
+    const nameFontSize = parseFloat(AppState.quartetSettings.nameFontSize) || 1.3;
+    const descFontSize = parseFloat(AppState.quartetSettings.descFontSize) || 0.6;
 
     idBadge.style.borderColor = cssColor;
     idBadge.style.color = useSetColorId ? cssColor : '#fff';
     idBadge.style.left = `${idOffsetX}%`;
     idBadge.style.top = `${idOffsetY}%`;
+    idBadge.style.width = `${15 * idBadgeSize}%`;
+    idBadge.style.fontSize = `${idBadgeSize}rem`;
     idBadge.innerText = subStr;
     cardEl.appendChild(idBadge);
 
@@ -618,6 +624,7 @@ function drawQuartetOverlay(cardEl, card) {
     cardName.style.color = useSetColorName ? cssColor : '#fff';
     cardName.innerText = data.name || `Karta ${subStr}`;
     cardName.style.fontFamily = fontFamily;
+    cardName.style.fontSize = `${nameFontSize}rem`;
     cardEl.appendChild(cardName);
     
     const cardDesc = document.createElement('p');
@@ -630,6 +637,7 @@ function drawQuartetOverlay(cardEl, card) {
     cardDesc.style.margin = '0';
     cardDesc.innerText = data.description || '';
     cardDesc.style.fontFamily = fontFamily;
+    cardDesc.style.fontSize = `${descFontSize}rem`;
     cardDesc.style.color = useSetColorDesc ? cssColor : '#ddd';
     cardEl.appendChild(cardDesc);
 }
@@ -1613,6 +1621,16 @@ function renderUIFromState() {
         // Detailní styl
         setVal('quartet-stat-size', AppState.quartetSettings.statSize || 1.0);
         setVal('quartet-font-size-value', AppState.quartetSettings.fontSizeValue || 1.2);
+        // Umístění a velikost ID / názvu / popisku (po načtení projektu ukázat uložené hodnoty)
+        const qs = AppState.quartetSettings;
+        [
+            ['quartet-id-offset-x', qs.idOffsetX ?? 50],   ['quartet-id-offset-y', qs.idOffsetY ?? 2],
+            ['quartet-name-offset-x', qs.nameOffsetX ?? 50], ['quartet-name-offset-y', qs.nameOffsetY ?? 12],
+            ['quartet-desc-offset-x', qs.descOffsetX ?? 50], ['quartet-desc-offset-y', qs.descOffsetY ?? 5],
+            ['quartet-id-size', qs.idBadgeSize || 1.0],
+            ['quartet-name-font-size', qs.nameFontSize || 1.3],
+            ['quartet-desc-font-size', qs.descFontSize || 0.6]
+        ].forEach(([id, v]) => { setVal(id, v); updateValueBadge(id, v); });
         setVal('quartet-font-size-label', AppState.quartetSettings.fontSizeLabel || 0.4);
         setVal('quartet-stat-value-offset', AppState.quartetSettings.statValueOffset || 0);
         setVal('quartet-stat-label-offset', AppState.quartetSettings.statLabelOffset || 0);
