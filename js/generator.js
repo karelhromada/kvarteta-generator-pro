@@ -569,6 +569,7 @@ function drawQuartetOverlay(cardEl, card) {
                 const b = parseInt(hex.substring(4, 6), 16);
                 hexContainer.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${statOpacity})`;
                 if (useSetColorStatBorder) {
+                    // u SVG tvarů (šestiúhelník, štít) jde barva do tahu SVG — viz níže
                     hexContainer.style.borderColor = cssColor;
                 }
             }
@@ -604,6 +605,13 @@ function drawQuartetOverlay(cardEl, card) {
             statHex.appendChild(statValue);
             statHex.appendChild(statLabel);
             hexContainer.appendChild(statHex);
+
+            // Šestiúhelník / štít jako SVG (js/stat-shapes.js) — CSS clip-path by Export ZIP ignoroval
+            if (isSvgStatShape(statShape)) {
+                statHex.style.position = 'relative'; // obsah nad SVG pozadím
+                const borderColor = (useSetColorStatBorder && statShape !== 'golden-hexagon') ? cssColor : null;
+                applySvgStatShape(hexContainer, statShape, hexContainer.style.backgroundColor, borderColor);
+            }
             
             // Golden hex needs custom color injection
             if (statShape === 'golden-hexagon') {
