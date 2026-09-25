@@ -632,7 +632,7 @@ function drawQuartetOverlay(cardEl, card) {
     cardName.style.transform = 'translateX(-50%)';
     cardName.style.width = '90%';
     cardName.style.color = useSetColorName ? cssColor : '#fff';
-    cardName.innerText = data.name || `Karta ${subStr}`;
+    setTextWithBox(cardName, data.name || `Karta ${subStr}`, lay, 'name');
     cardName.style.fontFamily = fontFamily;
     cardName.style.fontSize = `${nameFontSize}rem`;
     cardEl.appendChild(cardName);
@@ -645,7 +645,7 @@ function drawQuartetOverlay(cardEl, card) {
     cardDesc.style.transform = 'translateX(-50%)';
     cardDesc.style.width = '80%';
     cardDesc.style.margin = '0';
-    cardDesc.innerText = data.description || '';
+    setTextWithBox(cardDesc, data.description || '', lay, 'desc');
     cardDesc.style.fontFamily = fontFamily;
     cardDesc.style.fontSize = `${descFontSize}rem`;
     cardDesc.style.color = useSetColorDesc ? cssColor : '#ddd';
@@ -1648,6 +1648,15 @@ function renderUIFromState() {
         setVal('quartet-stat-value-offset', AppState.quartetSettings.statValueOffset || 0);
         setVal('quartet-stat-label-offset', AppState.quartetSettings.statLabelOffset || 0);
         setVal('quartet-stat-bg-color', AppState.quartetSettings.statBgColor || '#000000');
+        // Rámeček za názvem / popiskem (js/text-box.js)
+        ['name', 'desc'].forEach(prefix => {
+            const chk = document.getElementById(`quartet-${prefix}-box`);
+            if (chk) chk.checked = !!qs[`${prefix}BoxEnabled`];
+            setVal(`quartet-${prefix}-box-color`, qs[`${prefix}BoxColor`] || TEXT_BOX_DEFAULTS.color);
+            const op = qs[`${prefix}BoxOpacity`] ?? TEXT_BOX_DEFAULTS.opacity;
+            setVal(`quartet-${prefix}-box-opacity`, op);
+            updateValueBadge(`quartet-${prefix}-box-opacity`, op);
+        });
         setVal('quartet-stat-opacity', (AppState.quartetSettings.statOpacity || 0.4) * 100);
         
         updateQuartetGroupColorUI();
