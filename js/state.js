@@ -245,8 +245,15 @@ function initCardsByMode(mode) {
             AppState.cards.push(createEmptyCard(`pex_${i}`, `Pexeso ${i}`));
         }
     }
-    
-    // UI Přepínač
+
+    applyModeUI(mode);
+    saveState();
+    renderUIFromState();
+}
+
+// Přepne viditelnost panelů levé lišty podle režimu. Volá se při změně režimu
+// i po načtení projektu / undo — stav karet nemění.
+function applyModeUI(mode) {
     const qGlobalPanel = document.getElementById('quartet-global-panel');
     const mythGlobalPanel = document.getElementById('mythology-global-panel');
     const symGlobalPanel = document.getElementById('symbols-global-panel');
@@ -285,9 +292,6 @@ function initCardsByMode(mode) {
         if (indPositionControls) indPositionControls.style.display = isFamily ? 'none' : 'block';
         if (showSymbolsRow) showSymbolsRow.style.display = isFamily ? 'none' : 'flex';
     }
-
-    saveState();
-    renderUIFromState();
 }
 
 function createEmptyCard(id, label) {
@@ -361,7 +365,8 @@ function restoreFromHistory() {
     AppState = historicalState;
     AppState.history = currentHistory;
     AppState.historyIndex = currentHistoryIndex;
-    
+
+    applyModeUI(AppState.gameMode);
     renderUIFromState();
 }
 
@@ -399,12 +404,23 @@ function loadProject(event) {
         try {
             const data = JSON.parse(e.target.result);
             const newState = data.state || data; // Tolerance pro různé formáty
-            
+            if (!newState.gameMode) newState.gameMode = 'playing_cards';
+            if (!MODE_CARD_SIZES[newState.gameMode]) {
+                // Karty neznámého režimu by se vykreslily špatně — projekt raději nenačteme
+                alert(`Projekt má neznámý režim '${newState.gameMode}', nelze ho načíst.`);
+                return;
+            }
+
             // Vyčistíme historii při načtení nového projektu
             AppState = newState;
             AppState.history = [];
             AppState.historyIndex = -1;
-            
+
+            // Doplníme pole z novějších verzí a přepneme levou lištu na režim projektu
+            // (jinak zůstane panel z režimu, ve kterém generátor naběhl).
+            migrateMissingState();
+            applyModeUI(AppState.gameMode);
+
             saveState();
             renderUIFromState();
             alert(`Projekt '${AppState.projectName}' byl úspěšně načten.`);
